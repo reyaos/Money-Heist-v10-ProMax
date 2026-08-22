@@ -1457,10 +1457,10 @@ function detectMarketRegime() {
 const STRAT_CFG = {
   ENTRY_MIN:                   0.04,   // entry zone floor
   ENTRY_MAX:                   0.97,   // entry zone ceiling
-  MIN_DISPLACEMENT_MULTIPLIER: 0.50,   // displacement range ≥ 0.50× ATR
-  MIN_BODY_RATIO:              0.28,   // displacement body ≥ 28% of range
-  MIN_STRUCTURE_CANDLES:       10,     // ↑ from 5 — now M5 bars (was M1); 10×M5=50min, a real structure window
-  MIN_BMS_CLOSE_STRENGTH:      0.28,   // BMS close strength
+  MIN_DISPLACEMENT_MULTIPLIER: 0.40,   // ↓ from 0.50 — displacement range ≥ 0.40× ATR
+  MIN_BODY_RATIO:              0.22,   // ↓ from 0.28 — displacement body ≥ 22% of range
+  MIN_STRUCTURE_CANDLES:       7,      // ↓ from 10 — 7×M5=35min, still a real structure window (not down to the old 5)
+  MIN_BMS_CLOSE_STRENGTH:      0.22,   // ↓ from 0.28 — BMS close strength
   ATR_PERIOD:                  14,
 };
 
@@ -1570,11 +1570,11 @@ const strategy = {
   // ═══════════════════════════════════════════════════════════════════
   _detectLiquiditySweep() {
     // ── FIX: use only COMPLETED M5 bars — the forming bar has no confirmed wick.
-    // Scan the 5 most recent completed bars (~25 min) for a fresh sweep event.
+    // Scan the 10 most recent completed bars (~50 min) for a fresh sweep event.
     const arr = candles[300];
     const completed = (arr && arr.length > 1) ? arr.slice(0, -1) : arr;
     if (!completed || completed.length < 20) return null;
-    for (let offset = 0; offset < 7; offset++) {  // ↑40% — was 5 bars (~25 min)
+    for (let offset = 0; offset < 10; offset++) {  // ↑ from 7 bars (~35 min) — wider sweep window for M5 pace
       const idx = completed.length - 1 - offset;
       if (idx < 20) break;
       const current = completed[idx];
@@ -3532,7 +3532,7 @@ function checkDemoPositions() {
       postTPState = {
         dir: pos.dir,
         time: Date.now(),
-        evalEndTime: Date.now() + 6 * 60 * 1000, // 6-minute cooldown after TP (was 15) — allows faster re-entry
+        evalEndTime: Date.now() + 3 * 60 * 1000, // 3-minute cooldown after TP (was 6) — faster re-entry at M5 pace
         approved: false,
         tp: pos.tpPrice,
         entry: pos.entry,
@@ -4215,9 +4215,9 @@ function runStrategy() {
     }
   }
 
-  // ── SWEEP EPOCH DEDUPLICATION (shortened cooldown + tighter price tolerance) ──
-  const COOLDOWN   = 2 * 60 * 1000;   // ↓ further — was 3.5 min
-  const PRICE_TOL  = 0.15;            // ↓ further — was 0.21
+  // ── SWEEP EPOCH DEDUPLICATION (further loosened for M5 entry pace) ──
+  const COOLDOWN   = 1 * 60 * 1000;   // ↓ from 2 min
+  const PRICE_TOL  = 0.10;            // ↓ from 0.15
 
   const isBullDup = bs.sweepEpoch !== undefined && (
     (now - lastTradedBullSweepEpoch < COOLDOWN) ||
