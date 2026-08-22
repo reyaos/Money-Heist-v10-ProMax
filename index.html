@@ -800,7 +800,7 @@ input[type=range]::-webkit-slider-thumb{
           <button type="button" id="cfgRiskModeReport" class="nav-btn" style="flex:1;justify-content:center;font-size:9px;padding:6px 4px" onclick="setRiskMode('REPORT')">REPORT</button>
           <button type="button" id="cfgRiskModeBlock" class="nav-btn" style="flex:1;justify-content:center;font-size:9px;padding:6px 4px" onclick="setRiskMode('BLOCK')">BLOCK</button>
         </div>
-        <div class="field-hint" id="riskModeHint">REPORT = warn but allow overflow trades. BLOCK = reject trades exceeding 1.5× target risk.</div>
+        <div class="field-hint" id="riskModeHint">Risk overflow never blocks trades — account-level guards (DD lock, hard floor, loss-streak halving) protect capital instead.</div>
       </div>
       <div class="field">
         <label>Max SL Distance</label>
@@ -3824,7 +3824,7 @@ function updateRiskModeUI() {
     reportBtn.style.borderColor = 'var(--border2)';
     reportBtn.style.color = 'var(--text2)';
     reportBtn.style.background = 'transparent';
-    if(hint) hint.textContent = 'BLOCK mode: trades with risk > 1.5× target are REJECTED. Only safe sizes allowed.';
+    if(hint) hint.textContent = 'Risk overflow no longer blocks trades in either mode — account-level guards (DD lock, hard floor, loss-streak halving) protect capital instead. This toggle only changes warning verbosity.';
   } else {
     reportBtn.classList.add('active');
     reportBtn.style.borderColor = 'var(--gold2)';
@@ -3834,7 +3834,7 @@ function updateRiskModeUI() {
     blockBtn.style.borderColor = 'var(--border2)';
     blockBtn.style.color = 'var(--text2)';
     blockBtn.style.background = 'transparent';
-    if(hint) hint.textContent = 'REPORT mode: warns on risk overflow but ALLOWS the trade. You see the mismatch in the signal feed.';
+    if(hint) hint.textContent = 'REPORT mode: warns on risk overflow but ALLOWS the trade. Capital is protected at the account level (DD lock, hard floor, loss-streak halving), not by rejecting individual trades.';
   }
 }
 
@@ -3886,14 +3886,21 @@ function checkRiskOverflow(slDist, quality, useBalance) {
   // Min-lot enforcement check — raw lots below 0.01 means the floor inflated real risk
   const minLotForced = rawLots < 0.01;
   const actualRiskPct = bal > 0 ? (actualRisk / bal) * 100 : 0;
-  // Hard-block when min-lot pushes actual risk past 5% safety cap — applies in BOTH modes
-  const safetyHardBlock = actualRiskPct > SAFETY.MAX_RISK_CAP_PCT;
-  const blocked = safetyHardBlock || (CFG.RISK_MODE === 'BLOCK' && overflow > 1.5);
+  // ── NO PER-TRADE REJECTION ──
+  // Overflow (including min-lot inflation) is now REPORT-ONLY — the trade always
+  // fires. Capital protection is handled at the ACCOUNT level instead:
+  //   • MAX_DD_PCT daily drawdown lock
+  //   • hard floor / emergency floor
+  //   • consecutive-loss risk halving (already applied to riskPct above)
+  //   • survival pause / session lock after loss streaks
+  // Those catch runaway losses regardless of any single trade's size, so a
+  // single oversized-by-min-lot trade no longer blocks an otherwise-valid setup.
+  const blocked = false;
   // Min balance needed so 0.01 lot risk equals target risk% with this SL distance
   const minBalNeeded = riskPct > 0 ? Math.ceil((0.01 * 100 * slDist) / (riskPct / 100)) : 0;
   let warning = '';
-  if(safetyHardBlock && minLotForced) {
-    warning = `BLOCKED — min lot forces actual risk $${actualRisk.toFixed(2)} (${actualRiskPct.toFixed(1)}% of $${bal.toFixed(0)}) which exceeds 5% safety cap. Need $${minBalNeeded}+ balance for ${slDist}pt SL at ${riskPct}% risk`;
+  if(minLotForced && actualRiskPct > SAFETY.MAX_RISK_CAP_PCT) {
+    warning = `MIN LOT INFLATE: 0.01 lot forces $${actualRisk.toFixed(2)} real risk (${actualRiskPct.toFixed(1)}%) — above ${SAFETY.MAX_RISK_CAP_PCT}% cap but ALLOWED (account-level guards active). Consider raising balance or tightening MAX_SL_PTS.`;
   } else if(minLotForced && overflow > 1.0) {
     warning = `MIN LOT INFLATE: 0.01 lot forces $${actualRisk.toFixed(2)} real risk (${actualRiskPct.toFixed(1)}%) vs $${targetRisk.toFixed(2)} target. Need $${minBalNeeded}+ balance for these settings`;
   } else if(overflow > 1.0) {
