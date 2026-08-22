@@ -1513,6 +1513,37 @@ const strategy = {
     return { low: ob.low + size * startPct, high: ob.low + size * endPct };
   },
 
+  // ── REAL HTF BIAS (M15 swing structure) ──
+  // This was previously hardcoded to `true` — meaning the bot had ZERO directional
+  // filter and would take trades against the higher-timeframe trend. This is the
+  // one piece that makes it a real ICT/SMC bot instead of a lower-timeframe-only
+  // pattern scanner: only take the trade if the M15 structure agrees (or is neutral).
+  // Method: find the last two M15 fractal swing highs and swing lows.
+  //   HH + HL  → BULLISH   |   LH + LL → BEARISH   |   anything mixed → NEUTRAL
+  _htfBias() {
+    const m15 = candles[900];
+    if (!m15 || m15.length < 15) return 'NEUTRAL'; // not enough data — don't block trading
+    const arr = m15.slice(0, -1); // exclude forming bar
+    const swingHighs = [], swingLows = [];
+    for (let i = 2; i < arr.length - 2; i++) {
+      const c = arr[i];
+      const isSH = c.high > arr[i-1].high && c.high > arr[i-2].high && c.high > arr[i+1].high && c.high > arr[i+2].high;
+      const isSL = c.low  < arr[i-1].low  && c.low  < arr[i-2].low  && c.low  < arr[i+1].low  && c.low  < arr[i+2].low;
+      if (isSH) swingHighs.push({ i, val: c.high });
+      if (isSL) swingLows.push({ i, val: c.low });
+    }
+    if (swingHighs.length < 2 || swingLows.length < 2) return 'NEUTRAL';
+    const [hPrev, hLast] = swingHighs.slice(-2);
+    const [lPrev, lLast] = swingLows.slice(-2);
+    const higherHigh = hLast.val > hPrev.val;
+    const higherLow  = lLast.val > lPrev.val;
+    const lowerHigh   = hLast.val < hPrev.val;
+    const lowerLow    = lLast.val < lPrev.val;
+    if (higherHigh && higherLow) return 'BULLISH';
+    if (lowerHigh  && lowerLow ) return 'BEARISH';
+    return 'NEUTRAL';
+  },
+
   // ── ATR ──
   _atr(arr, period) {
     period = period || STRAT_CFG.ATR_PERIOD;
@@ -1746,6 +1777,9 @@ const strategy = {
   //  Step 6: price is inside the 20–50% mean-threshold of the OB
   // ═══════════════════════════════════════════════════════════════════
   evalBuy(price) {
+    const htfBias = this._htfBias();
+    const g0      = htfBias !== 'BEARISH'; // block only counter-trend; NEUTRAL/BULLISH pass
+
     const sweep = this._detectLiquiditySweep();
     const g1    = !!(sweep && sweep.type === 'SELL_SIDE_SWEEP');
 
@@ -1773,9 +1807,10 @@ const strategy = {
     const g6   = !!(zone && price >= zone.min && price <= zone.max);
 
     // G5 (FVG) is now a quality booster, not a hard gate — signal fires with or without FVG
-    const signal  = g1 && g2 && g3 && g4 && g6;  // G5 no longer required
+    // G0 (HTF bias) blocks only counter-trend setups
+    const signal  = g0 && g1 && g2 && g3 && g4 && g6;
     const score   = [g1, g2, g3, g4, g5, g6].filter(Boolean).length;
-    const quality = signal ? (this.inKillZone() && g5 ? 3 : (this.inKillZone() || g5) ? 2 : 1) : 1;
+    const quality = signal ? (this.inKillZone() && g5 && htfBias === 'BULLISH' ? 3 : (this.inKillZone() || g5) ? 2 : 1) : 1;
 
     // SL reference: sweep candle low (new strategy spec)
     const slRef = sweep ? { low: sweep.candle.low, high: sweep.candle.high } : null;
@@ -1791,16 +1826,16 @@ const strategy = {
       fvg,
       slRef,
       htf: {
-        htfGateOk: true, m15Aligned: true, m5Aligned: true,
+        htfGateOk: g0, m15Aligned: htfBias === 'BULLISH', m5Aligned: true,
         counterTrendOk: false, score: 10, strongSetupBypass: false,
-        m15Bias: 'bull', m5Bias: 'bull',
+        m15Bias: htfBias.toLowerCase(), m5Bias: 'bull',
       },
       conds: {
         bSess:  true,
         bKZ:    this.inKillZone(),
-        bM15:   true,
+        bM15:   htfBias === 'BULLISH',
         bM5:    true,
-        bHTF:   true,
+        bHTF:   g0,
         bSweep: g1,
         bDisp:  g2,
         bBMS:   g3,
@@ -1823,6 +1858,9 @@ const strategy = {
   //  Step 6: price is inside 20–50% mean-threshold from OB top
   // ═══════════════════════════════════════════════════════════════════
   evalSell(price) {
+    const htfBias = this._htfBias();
+    const g0      = htfBias !== 'BULLISH'; // block only counter-trend; NEUTRAL/BEARISH pass
+
     const sweep = this._detectLiquiditySweep();
     const g1    = !!(sweep && sweep.type === 'BUY_SIDE_SWEEP');
 
@@ -1846,9 +1884,10 @@ const strategy = {
     const g6   = !!(zone && price >= zone.min && price <= zone.max);
 
     // G5 (FVG) is a quality booster, not a hard gate — signal fires with or without FVG
-    const signal  = g1 && g2 && g3 && g4 && g6;  // G5 no longer required
+    // G0 (HTF bias) blocks only counter-trend setups
+    const signal  = g0 && g1 && g2 && g3 && g4 && g6;
     const score   = [g1, g2, g3, g4, g5, g6].filter(Boolean).length;
-    const quality = signal ? (this.inKillZone() && g5 ? 3 : (this.inKillZone() || g5) ? 2 : 1) : 1;
+    const quality = signal ? (this.inKillZone() && g5 && htfBias === 'BEARISH' ? 3 : (this.inKillZone() || g5) ? 2 : 1) : 1;
 
     const slRef = sweep ? { low: sweep.candle.low, high: sweep.candle.high } : null;
 
@@ -1864,16 +1903,16 @@ const strategy = {
       fvg,
       slRef,
       htf: {
-        htfGateOk: true, m15Aligned: true, m5Aligned: true,
+        htfGateOk: g0, m15Aligned: htfBias === 'BEARISH', m5Aligned: true,
         counterTrendOk: false, score: 10, strongSetupBypass: false,
-        m15Bias: 'bear', m5Bias: 'bear',
+        m15Bias: htfBias.toLowerCase(), m5Bias: 'bear',
       },
       conds: {
         sSess:  true,
         sKZ:    this.inKillZone(),
-        sM15:   true,
+        sM15:   htfBias === 'BEARISH',
         sM5:    true,
-        sHTF:   true,
+        sHTF:   g0,
         sSweep: g1,
         sDisp:  g2,
         sBMS:   g3,
