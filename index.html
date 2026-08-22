@@ -1457,11 +1457,12 @@ function detectMarketRegime() {
 const STRAT_CFG = {
   ENTRY_MIN:                   0.04,   // entry zone floor
   ENTRY_MAX:                   0.97,   // entry zone ceiling
-  MIN_DISPLACEMENT_MULTIPLIER: 0.40,   // ↓ from 0.50 — displacement range ≥ 0.40× ATR
-  MIN_BODY_RATIO:              0.22,   // ↓ from 0.28 — displacement body ≥ 22% of range
-  MIN_STRUCTURE_CANDLES:       7,      // ↓ from 10 — 7×M5=35min, still a real structure window (not down to the old 5)
-  MIN_BMS_CLOSE_STRENGTH:      0.22,   // ↓ from 0.28 — BMS close strength
+  MIN_DISPLACEMENT_MULTIPLIER: 0.35,   // ↓ from 0.40 — displacement range ≥ 0.35× ATR (loosened for more trades)
+  MIN_BODY_RATIO:              0.18,   // ↓ from 0.22 — displacement body ≥ 18% of range (loosened)
+  MIN_STRUCTURE_CANDLES:       6,      // ↓ from 7 — 6×M5=30min, still a real structure window
+  MIN_BMS_CLOSE_STRENGTH:      0.18,   // ↓ from 0.22 — BMS close strength (loosened)
   ATR_PERIOD:                  14,
+  OB_SCAN_BARS:                15,     // ↑ from 11 — 15×M5=75min (1h15m) OB origin search depth
 };
 
 const strategy = {
@@ -1656,8 +1657,11 @@ const strategy = {
   // ═══════════════════════════════════════════════════════════════════
   _detectOrderBlock(arr, bms) {
     if (!bms || !arr || arr.length < 6) return null;
+    // Scan backward from the bar right before the BMS/displacement candle,
+    // bounded to OB_SCAN_BARS deep (15 × M5 = 75min / 1h15m max lookback).
+    const floor = Math.max(0, arr.length - 1 - STRAT_CFG.OB_SCAN_BARS);
     if (bms.type === 'BULLISH_BMS') {
-      for (let i = arr.length - 11; i >= 0; i--) { // ↑40% scan depth (was -6)
+      for (let i = arr.length - 2; i >= floor; i--) {
         const c = arr[i];
         if (c.close < c.open) { // bearish candle → bullish OB
           return { type: 'BULLISH_OB', high: c.high, low: c.low, candle: c };
@@ -1665,7 +1669,7 @@ const strategy = {
       }
     }
     if (bms.type === 'BEARISH_BMS') {
-      for (let i = arr.length - 11; i >= 0; i--) { // ↑40% scan depth (was -6)
+      for (let i = arr.length - 2; i >= floor; i--) {
         const c = arr[i];
         if (c.close > c.open) { // bullish candle → bearish OB
           return { type: 'BEARISH_OB', high: c.high, low: c.low, candle: c };
