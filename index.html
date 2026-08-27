@@ -1100,7 +1100,7 @@ const CFG = {
   WIN_RATE_TGT : 55,
   DEMO_BALANCE : 0,
   MAX_LOT_CAP  : 10.0,
-  MAX_CONCURRENT_POS: 3,      // pyramiding cap — same-direction trend adds, no hedging
+  MAX_CONCURRENT_POS: 5,      // ↑ from 3 — more room to pyramid into a confirmed trend; each add still runs the full gate stack (g0-g7) and the okToAdd profit check individually
   // ── Risk Mode: REPORT = warn but allow, BLOCK = reject overflow trades ──
   RISK_MODE    : 'REPORT',   // 'REPORT' | 'BLOCK'
   MAX_SL_PTS   : 15.0,        // Hard cap on SL distance (raised from 6.0 for XAUUSD)
@@ -4075,10 +4075,13 @@ function runStrategy() {
   // ── PYRAMIDING CAP — multiple same-direction trend adds allowed, no hedging ──
   if (demoPositions.length >= CFG.MAX_CONCURRENT_POS) return;
   const openDir = demoPositions.length ? demoPositions[0].dir : null; // 'UP' | 'DOWN' | null
-  // Only pyramid onto a position that is already working in your favor —
-  // adding to a loser just increases exposure right as the setup is failing.
+  // Only pyramid onto a position that's at breakeven or better — adding to
+  // a position that's currently underwater just increases exposure right as
+  // the setup is struggling. (Loosened from "must be strictly positive" —
+  // still refuses to add onto a loser, just doesn't require it to already
+  // be in the green.)
   const floatingPnL = demoPositions.length ? demoPositions.reduce((s,p) => s + calcPnLForPos(p, mid), 0) : 0;
-  const okToAdd = !demoPositions.length || floatingPnL > 0;
+  const okToAdd = !demoPositions.length || floatingPnL >= 0;
   const canBuy  = (openDir === null || openDir === 'UP')   && okToAdd;
   const canSell = (openDir === null || openDir === 'DOWN') && okToAdd;
 
@@ -4110,7 +4113,11 @@ function runStrategy() {
   }
 
   // ── TRIGGER DEDUPLICATION — one entry per M1 bar per direction ──
-  const COOLDOWN   = 45 * 1000;   // ↑ from 10s — stops rapid re-entry into a move that's already failing
+  // Shortened back down from 45s now that the signal-quality gates (g0-g7:
+  // trend alignment, momentum burst, RSI exhaustion, ATR-scaled stops) are
+  // much stricter than when 45s was set — a qualifying signal is rarer now,
+  // so a shorter cooldown means catching more GOOD setups, not more noise.
+  const COOLDOWN   = 20 * 1000;
   const PRICE_TOL  = 0.05;
 
   const isBullDup = bs.sweepEpoch !== undefined && (
