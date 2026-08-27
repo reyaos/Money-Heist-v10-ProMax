@@ -1553,6 +1553,24 @@ const strategy = {
     return { bias: 'NEUTRAL', source: 'NONE' };
   },
 
+  // ── RSI — used as an EXHAUSTION filter, not a signal source ──
+  // A momentum burst that fires while RSI is already at a climactic extreme
+  // (blow-off top / capitulation bottom) is disproportionately likely to
+  // snap back before continuing — that snap-back is what taps the SL.
+  _rsi(arr, period = 14) {
+    if (!arr || arr.length < period + 1) return 50; // neutral when not enough data
+    const closes = arr.slice(-(period + 1)).map(c => c.close);
+    let gains = 0, losses = 0;
+    for (let i = 1; i < closes.length; i++) {
+      const diff = closes[i] - closes[i - 1];
+      if (diff >= 0) gains += diff; else losses -= diff;
+    }
+    const avgGain = gains / period, avgLoss = losses / period;
+    if (avgLoss === 0) return avgGain === 0 ? 50 : 100;
+    const rs = avgGain / avgLoss;
+    return 100 - (100 / (1 + rs));
+  },
+
   // ── ATR ──
   _atr(arr, period) {
     period = period || STRAT_CFG.ATR_PERIOD;
@@ -1682,13 +1700,19 @@ const strategy = {
     const g5 = m15Bias !== 'BEARISH';
     const g5Strong = m15Bias === 'BULLISH'; // exact alignment — used for quality tier only
 
+    // g7: EXHAUSTION FILTER — reject buys firing while M1 RSI is already
+    // climactic (≥80). A momentum burst up here is more likely the final
+    // spike of the move than the start of a fresh leg.
+    const rsi14 = this._rsi(m1completed, 14);
+    const g7 = rsi14 < 80;
+
     const trigCandle = mom ? mom.candle : null;
     const atrNow = this._atr(m1completed);
     const g6 = !!(trigCandle && Math.abs(price - trigCandle.close) <= atrNow * STRAT_CFG.TRIGGER_TOL_ATR);
 
     // g5 remains a hard gate against outright counter-M15 trades; g5Strong
     // (exact M15 agreement) only affects quality/sizing, not go/no-go.
-    const signal  = g0 && g1 && g2 && g3 && g4 && g5 && g6;
+    const signal  = g0 && g1 && g2 && g3 && g4 && g5 && g6 && g7;
     const score   = [g1, g2, g3, g4, g5Strong, g6].filter(Boolean).length;
     const quality = signal ? (this.inKillZone() && g5Strong && htf.bias === 'BULLISH' ? 3 : (this.inKillZone() || g5Strong) ? 2 : 1) : 1;
 
@@ -1749,11 +1773,16 @@ const strategy = {
     const g5 = m15Bias !== 'BULLISH';
     const g5Strong = m15Bias === 'BEARISH';
 
+    // g7: EXHAUSTION FILTER — reject sells firing while M1 RSI is already
+    // climactic (≤20). See evalBuy for rationale (mirrored).
+    const rsi14 = this._rsi(m1completed, 14);
+    const g7 = rsi14 > 20;
+
     const trigCandle = mom ? mom.candle : null;
     const atrNow = this._atr(m1completed);
     const g6 = !!(trigCandle && Math.abs(price - trigCandle.close) <= atrNow * STRAT_CFG.TRIGGER_TOL_ATR);
 
-    const signal  = g0 && g1 && g2 && g3 && g4 && g5 && g6;
+    const signal  = g0 && g1 && g2 && g3 && g4 && g5 && g6 && g7;
     const score   = [g1, g2, g3, g4, g5Strong, g6].filter(Boolean).length;
     const quality = signal ? (this.inKillZone() && g5Strong && htf.bias === 'BEARISH' ? 3 : (this.inKillZone() || g5Strong) ? 2 : 1) : 1;
 
@@ -2986,9 +3015,12 @@ function calcDynamicLots(slDist, quality, useBalance, useStartBal) {
     : bal;
   const baseRisk = Math.min(bal * riskPct / 100, tradeableCapital * riskPct / 100);
   const qMult = QUALITY_MULT[Math.max(1, Math.min(3, quality))] || 1.0;
-  const growthFactor = startBal > 0 ? Math.min(1.5, Math.sqrt(bal / startBal)) : 1.0;
-
-  // ── SURVIVAL ENGINE: Market regime risk scaling ──
+  // Position size grows only as the account ACTUALLY grows (bal/startBal),
+  // dampened by sqrt so it's not linear, capped so a hot streak can't turn
+  // into oversized bets. Raised modestly (1.5x → 1.75x) — this only ever
+  // activates after real banked profit, and every other safety layer below
+  // (loss-halving, regime/session throttling) still applies on top of it.
+  const growthFactor = startBal > 0 ? Math.min(1.75, Math.sqrt(bal / startBal)) : 1.0;
   // Reduces risk in non-trending conditions to protect capital.
   const regime = detectMarketRegime();
   const regimeMult = regime === 'EXPANSION' || regime === 'TREND' ? 1.0
@@ -3033,6 +3065,17 @@ function calcDynamicLots(slDist, quality, useBalance, useStartBal) {
 // candle's high/low rather than getting clipped by it. ──
 function slNoiseBuffer(atrVal) {
   return Math.max((atrVal || 0) * 0.35, 1.5);
+}
+
+// ── REGIME-ADAPTIVE REWARD TARGET ──
+// Same stop distance (same risk) every trade — but in a genuine EXPANSION
+// regime (strong, fresh momentum) the target extends further, since that's
+// when trend continuation has the most room to run. In a plain TREND regime
+// the base RR is used as-is. This improves profit factor on the strongest
+// setups without increasing risk on any single trade.
+function effectiveRR(regime) {
+  if (regime === 'EXPANSION') return CFG.RR + 0.75;
+  return CFG.RR;
 }
 
 // ── DEMO TRADE PLACEMENT ──
@@ -3081,7 +3124,8 @@ function _executeDemoTrade(dir, ob, quality = 1) {
     addSignal('info', `SL capped to max ${CFG.MAX_SL_PTS}pts: ${slPrice.toFixed(2)}`, mid);
   }
   if(slDist < 0.50) { addSignal('warn','SL too tight (< 0.50 pts) — skipping',null); return; }
-  const tpPrice = isBuy ? entryPrice + slDist * CFG.RR : entryPrice - slDist * CFG.RR;
+  const rr = effectiveRR(detectMarketRegime());
+  const tpPrice = isBuy ? entryPrice + slDist * rr : entryPrice - slDist * rr;
 
   // ── RISK OVERFLOW CHECK ──
   const riskCheck = checkRiskOverflow(slDist, quality);
@@ -3104,7 +3148,7 @@ function _executeDemoTrade(dir, ob, quality = 1) {
   const posUnits = adjLots * 100;
   const margin = (adjLots * 100 * entryPrice) / LEVERAGE;
   const slAmount = adjLots * 100 * slDist;
-  const tpAmount = +(slAmount * CFG.RR).toFixed(2);
+  const tpAmount = +(slAmount * rr).toFixed(2);
   const grade = quality >= 3 ? '★★★' : quality === 2 ? '★★' : '★';
   const newsTag = newsEngine.state !== 'NORMAL' ? ` [NEWS:${newsEngine.state}×${newsLotMult}]` : '';
   const riskTag = riskCheck.overflow > 1.0 ? ` [RISK:${riskCheck.overflow.toFixed(1)}x]` : '';
@@ -3291,15 +3335,21 @@ function checkDemoPositions() {
   });
 
   // ── CHECK SL/TP HITS ──
+  // NOTE: once partialTaken is true, the remaining runner has already booked
+  // 50% profit and its SL is locked at breakeven-or-better (see above) — so
+  // it skips the fixed TP and rides the trailing stop instead. This is what
+  // lets a genuine trend day pay out more than the original 1×RR target
+  // without adding any downside: the worst case for the runner is still a
+  // breakeven exit, exactly as before.
   demoPositions.forEach(pos => {
     if(closeData.find(c => c.pos.id === pos.id)) return; // already queued by TIME_EXIT
     const isBuy = pos.dir === 'UP';
     if(isBuy) {
       if(mid <= pos.slPrice) closeData.push({pos, pnl: (pos.trailPhase||0) >= 1 ? Math.max(0,(pos.slPrice-pos.entry)*pos.posUnits) : -(pos.slAmount), reason: (pos.trailPhase||0) >= 2 ? 'TRAIL' : (pos.trailPhase||0) >= 1 ? 'BE' : 'SL'});
-      else if(mid >= pos.tpPrice) closeData.push({pos, pnl: pos.tpAmount, reason: 'TP'});
+      else if(!pos.partialTaken && mid >= pos.tpPrice) closeData.push({pos, pnl: pos.tpAmount, reason: 'TP'});
     } else {
       if(mid >= pos.slPrice) closeData.push({pos, pnl: (pos.trailPhase||0) >= 1 ? Math.max(0,(pos.entry-pos.slPrice)*pos.posUnits) : -(pos.slAmount), reason: (pos.trailPhase||0) >= 2 ? 'TRAIL' : (pos.trailPhase||0) >= 1 ? 'BE' : 'SL'});
-      else if(mid <= pos.tpPrice) closeData.push({pos, pnl: pos.tpAmount, reason: 'TP'});
+      else if(!pos.partialTaken && mid <= pos.tpPrice) closeData.push({pos, pnl: pos.tpAmount, reason: 'TP'});
     }
   });
 
@@ -3714,7 +3764,7 @@ function checkRiskOverflow(slDist, quality, useBalance) {
   }
   const targetRisk = bal * riskPct / 100;
   const qMult = QUALITY_MULT[Math.max(1, Math.min(3, quality))] || 1.0;
-  const growthFactor = startBal > 0 ? Math.min(1.5, Math.sqrt(bal / startBal)) : 1.0;
+  const growthFactor = startBal > 0 ? Math.min(1.75, Math.sqrt(bal / startBal)) : 1.0;
   const rawLots = slDist > 0 ? (targetRisk * qMult * growthFactor) / (slDist * 100) : 0;
   const lots = Math.max(0.01, Math.min(CFG.MAX_LOT_CAP, +rawLots.toFixed(2)));
   const actualRisk = lots * 100 * slDist;
@@ -4684,7 +4734,8 @@ const replay = {
       slDist = CFG.MAX_SL_PTS;
     }
     if (slDist < 0.50) return;
-    const tpPrice = isBuy ? entryPrice + slDist * CFG.RR : entryPrice - slDist * CFG.RR;
+    const btRR = effectiveRR(detectMarketRegime());
+    const tpPrice = isBuy ? entryPrice + slDist * btRR : entryPrice - slDist * btRR;
 
     // ── RISK OVERFLOW CHECK ──
     const riskCheck = checkRiskOverflow(slDist, sig.quality, this.replayBal);
@@ -4701,7 +4752,7 @@ const replay = {
     if (this.replayRiskHalved) riskPct /= 2;
     const maxLoss = Math.max(0, this.replayBal - this.replayHardFloor);
     const slAmount = Math.min(this.replayBal * riskPct / 100, maxLoss);
-    const tpAmount = +(slAmount * CFG.RR).toFixed(2);
+    const tpAmount = +(slAmount * btRR).toFixed(2);
     if (slAmount <= 0) return;
     let lots = +(slAmount / (slDist * 100)).toFixed(2);
     lots = Math.max(0.01, Math.min(CFG.MAX_LOT_CAP, lots));
@@ -5635,7 +5686,7 @@ function _scanGapPositions() {
           closeData.push({ pos, pnl, reason, atPrice: pos.slPrice });
           break;
         }
-        if (bar.high >= pos.tpPrice) {
+        if (!pos.partialTaken && bar.high >= pos.tpPrice) {
           closeData.push({ pos, pnl: pos.tpAmount, reason: 'TP', atPrice: pos.tpPrice });
           break;
         }
@@ -5647,7 +5698,7 @@ function _scanGapPositions() {
           closeData.push({ pos, pnl, reason, atPrice: pos.slPrice });
           break;
         }
-        if (bar.low <= pos.tpPrice) {
+        if (!pos.partialTaken && bar.low <= pos.tpPrice) {
           closeData.push({ pos, pnl: pos.tpAmount, reason: 'TP', atPrice: pos.tpPrice });
           break;
         }
