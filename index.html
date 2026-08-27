@@ -649,35 +649,35 @@ input[type=range]::-webkit-slider-thumb{
 
     </div>
     <div class="settings-section">
-      <div class="settings-section-title">BUY Setup — ICT/SMC 6-Gate Execution Chain</div>
+      <div class="settings-section-title">BUY Setup — Trend-Following Momentum Chain</div>
       <div class="conds" id="buyConds">
         <div class="cond" data-k="bSess"><span class="ci no">○</span>G0: Active Session (Asian / London / NY)</div>
         <div class="cond" data-k="bKZ"><span class="ci no">○</span>Context: Kill Zone Active (Asian/London/NY KZ) → quality +1★</div>
         <div class="cond" data-k="bM15"><span class="ci no">○</span>Context: H1/M15 Bias = BULLISH → ★★★ quality eligible</div>
-        <div class="cond" data-k="bM5"><span class="ci no">○</span>Context: M5 is entry TF (always active)</div>
+        <div class="cond" data-k="bM5"><span class="ci no">○</span>Context: M5 EMA trend rising</div>
         <div class="cond" data-k="bHTF"><span class="ci no">○</span>G0: H1/M15 Bias ≠ BEARISH (blocks counter-trend only)</div>
-        <div class="cond" data-k="bSweep"><span class="ci no">○</span>G1: Prior Swing Low Swept + Reclaimed (Liquidity Grab, M5)</div>
-        <div class="cond" data-k="bDisp"><span class="ci no">○</span>G2: M5 Displacement Candle (impulse move)</div>
-        <div class="cond" data-k="bBMS"><span class="ci no">○</span>G3: M5 MSS / BMS Confirmed (structure shift to upside)</div>
-        <div class="cond" data-k="bOB"><span class="ci no">○</span>G4: M5 +OB Origin Identified</div>
-        <div class="cond" data-k="bHL"><span class="ci no">○</span>G5: Price Returned to 4–97% of M5 OB (Mean Threshold)</div>
-        <div class="cond" data-k="bEntry"><span class="ci no">○</span>G6: M5 Zone Retrace Confirmed → SNIPER ENTRY</div>
+        <div class="cond" data-k="bSweep"><span class="ci no">○</span>G1: M1 Fast EMA(8) &gt; Slow EMA(21) — execution-TF trend</div>
+        <div class="cond" data-k="bDisp"><span class="ci no">○</span>G2: M5 EMA(20) Slope Rising — HTF trend confirmed</div>
+        <div class="cond" data-k="bBMS"><span class="ci no">○</span>G3: M1 Momentum Burst Candle (bullish trigger)</div>
+        <div class="cond" data-k="bOB"><span class="ci no">○</span>G4: Not Overextended from M1 Fast EMA (pullback OK)</div>
+        <div class="cond" data-k="bHL"><span class="ci no">○</span>G5: Live Price Still Fresh vs Trigger Candle</div>
+        <div class="cond" data-k="bEntry"><span class="ci no">○</span>ENTRY: Full Chain Confirmed → TREND BUY</div>
       </div>
     </div>
     <div class="settings-section">
-      <div class="settings-section-title">SELL Setup — ICT/SMC 6-Gate Execution Chain</div>
+      <div class="settings-section-title">SELL Setup — Trend-Following Momentum Chain</div>
       <div class="conds" id="sellConds">
         <div class="cond" data-k="sSess"><span class="ci no">○</span>G0: Active Session (Asian / London / NY)</div>
         <div class="cond" data-k="sKZ"><span class="ci no">○</span>Context: Kill Zone Active (Asian/London/NY KZ) → quality +1★</div>
         <div class="cond" data-k="sM15"><span class="ci no">○</span>Context: H1/M15 Bias = BEARISH → ★★★ quality eligible</div>
-        <div class="cond" data-k="sM5"><span class="ci no">○</span>Context: M5 is entry TF (always active)</div>
+        <div class="cond" data-k="sM5"><span class="ci no">○</span>Context: M5 EMA trend falling</div>
         <div class="cond" data-k="sHTF"><span class="ci no">○</span>G0: H1/M15 Bias ≠ BULLISH (blocks counter-trend only)</div>
-        <div class="cond" data-k="sSweep"><span class="ci no">○</span>G1: Prior Swing High Swept + Reclaimed (Liquidity Grab, M5)</div>
-        <div class="cond" data-k="sDisp"><span class="ci no">○</span>G2: M5 Displacement Candle (impulse move)</div>
-        <div class="cond" data-k="sBMS"><span class="ci no">○</span>G3: M5 MSS / BMS Confirmed (structure shift to downside)</div>
-        <div class="cond" data-k="sOB"><span class="ci no">○</span>G4: M5 -OB Origin Identified</div>
-        <div class="cond" data-k="sLH"><span class="ci no">○</span>G5: Price Returned to 4–97% of M5 OB (Mean Threshold)</div>
-        <div class="cond" data-k="sEntry"><span class="ci no">○</span>G6: M5 Zone Retrace Confirmed → SNIPER ENTRY</div>
+        <div class="cond" data-k="sSweep"><span class="ci no">○</span>G1: M1 Fast EMA(8) &lt; Slow EMA(21) — execution-TF trend</div>
+        <div class="cond" data-k="sDisp"><span class="ci no">○</span>G2: M5 EMA(20) Slope Falling — HTF trend confirmed</div>
+        <div class="cond" data-k="sBMS"><span class="ci no">○</span>G3: M1 Momentum Burst Candle (bearish trigger)</div>
+        <div class="cond" data-k="sOB"><span class="ci no">○</span>G4: Not Overextended from M1 Fast EMA (pullback OK)</div>
+        <div class="cond" data-k="sLH"><span class="ci no">○</span>G5: Live Price Still Fresh vs Trigger Candle</div>
+        <div class="cond" data-k="sEntry"><span class="ci no">○</span>ENTRY: Full Chain Confirmed → TREND SELL</div>
       </div>
     </div>
   </div>
@@ -1092,26 +1092,27 @@ let _derivWS             = null;  // WebSocket handle — Deriv live feed
 let _derivReconnectTimer = null;
 
 const CFG = {
-  RISK_PCT     : 1.0,
-  RR           : 3.0,
+  RISK_PCT     : 2.5,         // ↑ from 1.0 — aggressive per-trade risk, compounds off current balance
+  RR           : 2.0,         // ↓ from 3.0 — faster-resolving targets to suit trend-scalp pace
   START_BALANCE: 0,
   PROFIT_TARGET: 0,
-  MAX_DD_PCT   : 5.0,
+  MAX_DD_PCT   : 12.0,        // ↑ from 5.0 — more room to run before the circuit breaker trips
   WIN_RATE_TGT : 55,
   DEMO_BALANCE : 0,
   MAX_LOT_CAP  : 10.0,
+  MAX_CONCURRENT_POS: 3,      // pyramiding cap — same-direction trend adds, no hedging
   // ── Risk Mode: REPORT = warn but allow, BLOCK = reject overflow trades ──
   RISK_MODE    : 'REPORT',   // 'REPORT' | 'BLOCK'
   MAX_SL_PTS   : 15.0,        // Hard cap on SL distance (raised from 6.0 for XAUUSD)
   // ── Three-Phase Trailing Stop ──
   TRAIL_ENABLED: true,
-  TRAIL_PHASE_1: 60,          // % to TP for BE lock — raised from 50% to avoid premature BE on volatility
-  TRAIL_PHASE_2: 80,          // % to TP for 40% trail
-  TRAIL_PHASE_3: 93,          // % to TP for 60% runner trail
+  TRAIL_PHASE_1: 50,          // % to TP for BE lock — tightened for faster trend-scalp pace
+  TRAIL_PHASE_2: 70,          // % to TP for 40% trail
+  TRAIL_PHASE_3: 88,          // % to TP for 60% runner trail
   TRAIL_DIST   : 5.0,        // Min trail distance — raised from 3.0 for XAUUSD volatility
   // ── Blow-Proof Safety Layer Settings (user-configurable) ──
   SAFETY_HARD_FLOOR_PCT   : 10,   // % of start balance = hard floor
-  SAFETY_MAX_RISK_CAP_PCT : 5,    // % hard cap on risk per trade
+  SAFETY_MAX_RISK_CAP_PCT : 8,    // ↑ from 5 — raised ceiling so RISK_PCT can actually apply
   SAFETY_CONSEC_LOSS_HALVE: 3,    // consecutive losses before halving risk
   SAFETY_EMERG_FLOOR_PCT  : 15,   // % above floor = emergency warning zone
   SAFETY_MIN_MARGIN_PCT   : 50,   // % of free margin that must remain
@@ -1449,20 +1450,22 @@ function detectMarketRegime() {
   return 'RANGE';
 }
 
-// ── STRATEGY ENGINE — ELITE ICT/SMC DELIVERY ENGINE ──
-// CORE FLOW: Liquidity Sweep → True BMS → Strong Displacement → Valid OB
-//            → Imbalance/FVG → Mean Threshold Retracement (20–50%)
-// M5 = Narrative / Bias (Sweep)  |  M1 = Precision Execution (all other steps)
+// ── STRATEGY ENGINE — TREND-FOLLOWING MOMENTUM / SCALP ENGINE ──
+// CORE FLOW: H1/M15 Trend Bias → M5 EMA Trend Confirmation → M1 EMA Alignment
+//            → M1 Momentum Burst → Pullback/Overextension Filter → Live Trigger
+// Fast execution timeframe = M1 (fires on every completed M1 bar in trend
+// direction). No retracement-and-wait — the bot trades WITH the trend the
+// moment momentum confirms, which is what gives it its high trade frequency.
 
 const STRAT_CFG = {
-  ENTRY_MIN:                   0.04,   // entry zone floor
-  ENTRY_MAX:                   0.97,   // entry zone ceiling
-  MIN_DISPLACEMENT_MULTIPLIER: 0.35,   // ↓ from 0.40 — displacement range ≥ 0.35× ATR (loosened for more trades)
-  MIN_BODY_RATIO:              0.18,   // ↓ from 0.22 — displacement body ≥ 18% of range (loosened)
-  MIN_STRUCTURE_CANDLES:       6,      // ↓ from 7 — 6×M5=30min, still a real structure window
-  MIN_BMS_CLOSE_STRENGTH:      0.18,   // ↓ from 0.22 — BMS close strength (loosened)
-  ATR_PERIOD:                  14,
-  OB_SCAN_BARS:                15,     // ↑ from 11 — 15×M5=75min (1h15m) OB origin search depth
+  EMA_FAST:                8,      // M1 fast EMA — momentum/trend trigger
+  EMA_SLOW:                21,     // M1 slow EMA — trend filter
+  TREND_EMA:               20,     // M5 EMA period — HTF trend slope confirmation
+  MIN_DISPLACEMENT_MULTIPLIER: 0.30, // momentum candle range ≥ 0.30× ATR (fast pace)
+  MIN_BODY_RATIO:          0.15,   // momentum candle body ≥ 15% of range
+  PULLBACK_MAX_ATR:        1.4,    // max distance from M1 fast EMA (in ATR) before a move is "overextended"
+  TRIGGER_TOL_ATR:         0.70,   // live price must stay within this many ATR of the trigger candle close
+  ATR_PERIOD:              14,
 };
 
 const strategy = {
@@ -1536,11 +1539,9 @@ const strategy = {
   },
 
   // ── REAL HTF BIAS — H1 (major) → M15 (refinement) ──
-  // True ICT top-down: H1 sets the actual directional bias. M15 is used to
-  // confirm/refine it. M5 (below) is ONLY where sweeps/structure/entries happen —
-  // neither H1 nor M15 ever generates a trade signal themselves, they only gate
-  // direction. H1 takes priority since it's the real higher timeframe; M15 fills
-  // in when H1 doesn't have a clean structure yet (or isn't available, e.g. backtest).
+  // H1 sets the actual directional bias; M15 refines/confirms it when H1
+  // isn't available yet. This is the "trade with the trend" filter — nothing
+  // trades against it.
   _htfBias() {
     const h1Bias  = this._swingBias(candles[3600]);
     const m15Bias = this._swingBias(candles[900]);
@@ -1562,45 +1563,52 @@ const strategy = {
     return slice.reduce((a, b) => a + b, 0) / slice.length;
   },
 
-  // ═══════════════════════════════════════════════════════════════════
-  //  STEP 1 — LIQUIDITY SWEEP  (M5 candles = narrative / bias)
-  //  Detects whether recent M5 price action swept a prior swing and
-  //  closed back inside — revealing institutional intent.
-  //  Sell-Side Sweep → anticipate BUY delivery
-  //  Buy-Side Sweep  → anticipate SELL delivery
-  // ═══════════════════════════════════════════════════════════════════
-  _detectLiquiditySweep() {
-    // ── FIX: use only COMPLETED M5 bars — the forming bar has no confirmed wick.
-    // Scan the 10 most recent completed bars (~50 min) for a fresh sweep event.
-    const arr = candles[300];
-    const completed = (arr && arr.length > 1) ? arr.slice(0, -1) : arr;
-    if (!completed || completed.length < 20) return null;
-    for (let offset = 0; offset < 10; offset++) {  // ↑ from 7 bars (~35 min) — wider sweep window for M5 pace
-      const idx = completed.length - 1 - offset;
-      if (idx < 20) break;
-      const current = completed[idx];
-      const prev    = completed.slice(Math.max(0, idx - 25), idx);
-      if (!prev.length) break;
-      const highest = Math.max(...prev.map(c => c.high));
-      const lowest  = Math.min(...prev.map(c => c.low));
-      // Sell-side sweep: wick below prior lows, closed back inside
-      if (current.low < lowest && current.close > lowest) {
-        return { type: 'SELL_SIDE_SWEEP', level: lowest, candle: current };
-      }
-      // Buy-side sweep: wick above prior highs, closed back inside
-      if (current.high > highest && current.close < highest) {
-        return { type: 'BUY_SIDE_SWEEP', level: highest, candle: current };
-      }
+  // ── EMA (simple-average seeded) ──
+  _ema(arr, period) {
+    if (!arr || arr.length < period) return null;
+    const k = 2 / (period + 1);
+    let ema = arr.slice(0, period).reduce((a, c) => a + c.close, 0) / period;
+    for (let i = period; i < arr.length; i++) {
+      ema = arr[i].close * k + ema * (1 - k);
     }
-    return null;
+    return ema;
+  },
+
+  // EMA value + slope (vs one bar earlier), computed on completed bars only.
+  _emaWithSlope(arr, period) {
+    if (!arr || arr.length < 2) return null;
+    const completed = arr.slice(0, -1); // exclude forming bar
+    if (completed.length < period + 1) return null;
+    const emaNow  = this._ema(completed, period);
+    const emaPrev = this._ema(completed.slice(0, -1), period);
+    if (emaNow === null || emaPrev === null) return null;
+    return { value: emaNow, slope: emaNow - emaPrev };
+  },
+
+  // ── M5 HTF TREND CONFIRMATION — EMA slope must agree with the bias ──
+  _m5TrendAligned(bias) {
+    const t = this._emaWithSlope(candles[300], STRAT_CFG.TREND_EMA);
+    if (!t) return false;
+    if (bias === 'BULLISH') return t.slope > 0;
+    if (bias === 'BEARISH') return t.slope < 0;
+    return false;
+  },
+
+  // ── M1 EMA ALIGNMENT — fast EMA vs slow EMA, execution-timeframe trend ──
+  _m1EmaAligned(m1, isBull) {
+    const completed = (m1 && m1.length > 1) ? m1.slice(0, -1) : m1;
+    const fast = this._ema(completed, STRAT_CFG.EMA_FAST);
+    const slow = this._ema(completed, STRAT_CFG.EMA_SLOW);
+    if (fast === null || slow === null) return false;
+    return isBull ? fast > slow : fast < slow;
   },
 
   // ═══════════════════════════════════════════════════════════════════
-  //  STEP 2 — STRONG DISPLACEMENT  (M1 — execution layer)
-  //  The last M1 candle must have a large range (≥1.5× ATR) and a
-  //  high body-to-range ratio (≥70%).  This IS the delivery candle.
+  //  MOMENTUM BURST  (M1 — execution layer)
+  //  The last completed M1 candle must have an above-average range and a
+  //  strong body-to-range ratio in the trend direction. This IS the trigger.
   // ═══════════════════════════════════════════════════════════════════
-  _detectDisplacement(arr) {
+  _detectMomentum(arr) {
     if (!arr || arr.length < 2) return null;
     const current    = arr[arr.length - 1];
     const currentATR = this._atr(arr);
@@ -1619,222 +1627,72 @@ const strategy = {
     return null;
   },
 
-  // ═══════════════════════════════════════════════════════════════════
-  //  STEP 3 — TRUE BMS  (M1)
-  //  The displacement candle must ALSO close beyond the prior swing
-  //  extreme — confirming a genuine market structure shift, not just
-  //  a spike.  Close strength ≥ 70% of the candle range required.
-  // ═══════════════════════════════════════════════════════════════════
-  _detectTrueBMS(arr, displacement) {
-    if (!displacement || !arr || arr.length < STRAT_CFG.MIN_STRUCTURE_CANDLES) return null;
-    const recent  = arr.slice(-STRAT_CFG.MIN_STRUCTURE_CANDLES);
-    const current = recent[recent.length - 1];
-    const rangeH  = current.high - current.low || 1;
-
-    if (displacement.direction === 'BULLISH') {
-      const significantHigh = Math.max(...recent.slice(0, -1).map(c => c.high));
-      const closeStrength   = (current.close - current.low) / rangeH;
-      if (current.close > significantHigh && closeStrength >= STRAT_CFG.MIN_BMS_CLOSE_STRENGTH) {
-        return { type: 'BULLISH_BMS', brokenLevel: significantHigh, candle: current };
-      }
-    }
-    if (displacement.direction === 'BEARISH') {
-      const significantLow = Math.min(...recent.slice(0, -1).map(c => c.low));
-      const closeStrength  = (current.high - current.close) / rangeH;
-      if (current.close < significantLow && closeStrength >= STRAT_CFG.MIN_BMS_CLOSE_STRENGTH) {
-        return { type: 'BEARISH_BMS', brokenLevel: significantLow, candle: current };
-      }
-    }
-    return null;
+  // ── PULLBACK / OVEREXTENSION FILTER ──
+  // Checks price right BEFORE the momentum/trigger candle — was the market
+  // still reasonably close to the M1 fast EMA when the burst started, or was
+  // it already deep into an extended move? The trigger candle itself is
+  // excluded from this check since a genuine burst is expected to travel
+  // away from the EMA — that's the whole point of it firing.
+  _notOverextended(m1) {
+    const completed = (m1 && m1.length > 1) ? m1.slice(0, -1) : m1; // drop forming bar
+    const priorBars = completed.slice(0, -1);                       // drop trigger candle too
+    if (priorBars.length < STRAT_CFG.EMA_FAST + 1) return true;     // fail-open when not enough data yet
+    const fast = this._ema(priorBars, STRAT_CFG.EMA_FAST);
+    if (fast === null) return true;
+    const atr        = this._atr(priorBars);
+    const priorClose = priorBars[priorBars.length - 1].close;
+    return Math.abs(priorClose - fast) <= atr * STRAT_CFG.PULLBACK_MAX_ATR;
   },
 
   // ═══════════════════════════════════════════════════════════════════
-  //  STEP 4 — VALID ORDER BLOCK  (M1)
-  //  Scan back from the displacement candle for the last opposing-
-  //  colour candle — this is the institutional origin / OB.
-  //  Bullish OB = last bearish candle before bullish displacement.
-  //  Bearish OB = last bullish candle before bearish displacement.
-  // ═══════════════════════════════════════════════════════════════════
-  _detectOrderBlock(arr, bms) {
-    if (!bms || !arr || arr.length < 6) return null;
-    // Scan backward from the bar right before the BMS/displacement candle,
-    // bounded to OB_SCAN_BARS deep (15 × M5 = 75min / 1h15m max lookback).
-    const floor = Math.max(0, arr.length - 1 - STRAT_CFG.OB_SCAN_BARS);
-    if (bms.type === 'BULLISH_BMS') {
-      for (let i = arr.length - 2; i >= floor; i--) {
-        const c = arr[i];
-        if (c.close < c.open) { // bearish candle → bullish OB
-          return { type: 'BULLISH_OB', high: c.high, low: c.low, candle: c };
-        }
-      }
-    }
-    if (bms.type === 'BEARISH_BMS') {
-      for (let i = arr.length - 2; i >= floor; i--) {
-        const c = arr[i];
-        if (c.close > c.open) { // bullish candle → bearish OB
-          return { type: 'BEARISH_OB', high: c.high, low: c.low, candle: c };
-        }
-      }
-    }
-    return null;
-  },
-
-  // ═══════════════════════════════════════════════════════════════════
-  //  STEP 5 — IMBALANCE / FVG  (M1)
-  //  Three-candle fair-value gap: a price window left behind by the
-  //  delivery candle that price must return to fill.
-  //  Bullish FVG: c1.high < c3.low   (gap above prior range)
-  //  Bearish FVG: c1.low  > c3.high  (gap below prior range)
-  // ═══════════════════════════════════════════════════════════════════
-  _detectImbalance(arr) {
-    if (!arr || arr.length < 3) return null;
-    for (let i = arr.length - 3; i >= 0; i--) { // ↑40% scan range (was i >= 2)
-      const c1 = arr[i - 2], c2 = arr[i - 1], c3 = arr[i];
-      if (c1.high < c3.low && c2.close > c2.open) {
-        return { type: 'BULLISH_IMBALANCE', high: c3.low, low: c1.high,
-                 midpoint: (c3.low + c1.high) / 2, epoch: c3.epoch };
-      }
-      if (c1.low > c3.high && c2.close < c2.open) {
-        return { type: 'BEARISH_IMBALANCE', high: c1.low, low: c3.high,
-                 midpoint: (c1.low + c3.high) / 2, epoch: c3.epoch };
-      }
-    }
-    return null;
-  },
-
-  // ═══════════════════════════════════════════════════════════════════
-  //  STEP 6 — MEAN THRESHOLD ENTRY ZONE  (20–50% of OB)
-  //  Price must retrace into the lower 20–50% of the bullish OB, or
-  //  the upper 50–80% (=20–50% from top) of the bearish OB, before
-  //  any entry is considered.
-  // ═══════════════════════════════════════════════════════════════════
-  _entryZone(ob, isBull) {
-    const range = ob.high - ob.low;
-    if (isBull) {
-      return { min: ob.low + range * STRAT_CFG.ENTRY_MIN, max: ob.low + range * STRAT_CFG.ENTRY_MAX };
-    } else {
-      return { min: ob.high - range * STRAT_CFG.ENTRY_MAX, max: ob.high - range * STRAT_CFG.ENTRY_MIN };
-    }
-  },
-
-  // ═══════════════════════════════════════════════════════════════════
-  //  BULLISH BMS — full chain result for chart rendering
-  // ═══════════════════════════════════════════════════════════════════
-  bullishBMS() {
-    const sweep = this._detectLiquiditySweep();
-    if (!sweep || sweep.type !== 'SELL_SIDE_SWEEP') return { valid: false };
-    const m5   = candles[300];
-    if (!m5 || m5.length < STRAT_CFG.MIN_STRUCTURE_CANDLES) return { valid: false };
-    const disp = this._detectDisplacement(m5);
-    if (!disp || disp.direction !== 'BULLISH') return { valid: false };
-    const bms  = this._detectTrueBMS(m5, disp);
-    if (!bms || bms.type !== 'BULLISH_BMS') return { valid: false };
-    const ob   = this._detectOrderBlock(m5, bms);
-    if (!ob || ob.type !== 'BULLISH_OB') return { valid: false };
-    const imb  = this._detectImbalance(m5);
-    const fvg  = (imb && imb.type === 'BULLISH_IMBALANCE')
-               ? { low: imb.low, high: imb.high, epoch: imb.epoch } : null;
-    return {
-      valid: true,
-      sweepLow:   sweep.level,
-      sweepEpoch: sweep.candle.epoch,
-      ob:         { low: ob.low, high: ob.high, epoch: ob.candle ? ob.candle.epoch : null },
-      fvg,
-      bmsCandle:  bms.candle,
-      obCandle:   ob.candle,
-    };
-  },
-
-  // ═══════════════════════════════════════════════════════════════════
-  //  BEARISH BMS — full chain result for chart rendering
-  // ═══════════════════════════════════════════════════════════════════
-  bearishBMS() {
-    const sweep = this._detectLiquiditySweep();
-    if (!sweep || sweep.type !== 'BUY_SIDE_SWEEP') return { valid: false };
-    const m5   = candles[300];
-    if (!m5 || m5.length < STRAT_CFG.MIN_STRUCTURE_CANDLES) return { valid: false };
-    const disp = this._detectDisplacement(m5);
-    if (!disp || disp.direction !== 'BEARISH') return { valid: false };
-    const bms  = this._detectTrueBMS(m5, disp);
-    if (!bms || bms.type !== 'BEARISH_BMS') return { valid: false };
-    const ob   = this._detectOrderBlock(m5, bms);
-    if (!ob || ob.type !== 'BEARISH_OB') return { valid: false };
-    const imb  = this._detectImbalance(m5);
-    const fvg  = (imb && imb.type === 'BEARISH_IMBALANCE')
-               ? { low: imb.low, high: imb.high, epoch: imb.epoch } : null;
-    return {
-      valid: true,
-      sweepHigh:  sweep.level,
-      sweepEpoch: sweep.candle.epoch,
-      ob:         { low: ob.low, high: ob.high, epoch: ob.candle ? ob.candle.epoch : null },
-      fvg,
-      bmsCandle:  bms.candle,
-      obCandle:   ob.candle,
-    };
-  },
-
-  // ═══════════════════════════════════════════════════════════════════
-  //  EVAL BUY
-  //  Strict sequential gate chain — every step must pass.
-  //  No scores, no bypasses, no partial signals.
-  //  Step 1: M5 sell-side sweep (SELL_SIDE_SWEEP)
-  //  Step 2: M1 displacement candle is BULLISH
-  //  Step 3: M1 displacement also breaks prior high (TRUE BMS)
-  //  Step 4: valid bullish OB exists on M1
-  //  Step 5: bullish FVG present (imbalance created)
-  //  Step 6: price is inside the 20–50% mean-threshold of the OB
+  //  EVAL BUY — trend-following momentum chain, evaluated on live tick
+  //  G0: H1/M15 bias not bearish (trade with the trend)
+  //  G1: M1 fast EMA > slow EMA (execution-TF trend)
+  //  G2: M5 EMA slope rising (HTF trend confirmation)
+  //  G3: M1 momentum burst candle is bullish (the actual trigger)
+  //  G4: not overextended from the M1 fast EMA (pullback quality filter)
+  //  G5: M15 swing bias bullish (quality booster only, not a hard gate)
+  //  G6: live price still close to the trigger candle (fresh signal, no stale chase)
   // ═══════════════════════════════════════════════════════════════════
   evalBuy(price) {
     const htf = this._htfBias();
     const g0  = htf.bias !== 'BEARISH'; // block only counter-trend; NEUTRAL/BULLISH pass
 
-    const sweep = this._detectLiquiditySweep();
-    const g1    = !!(sweep && sweep.type === 'SELL_SIDE_SWEEP');
+    const m1raw = candles[60];
+    if (!m1raw || m1raw.length < STRAT_CFG.EMA_SLOW + 2) return this._emptyEval();
 
-    // ── M5 IS THE ENTRY TIMEFRAME ──
-    // Sweep, displacement, BMS, OB, FVG, and the entry zone are ALL derived from
-    // completed M5 bars. H1/M15 (above) never generate signals — they only gate
-    // direction via htf.bias. This is the full top-down structure: H1/M15 bias →
-    // M5 sweep + structure + entry.
-    const m5raw = candles[300];
-    const m5    = (m5raw && m5raw.length > 1) ? m5raw.slice(0, -1) : m5raw;
-    const disp = (m5 && m5.length >= 2) ? this._detectDisplacement(m5) : null;
-    const g2   = !!(disp && disp.direction === 'BULLISH');
+    const g1 = this._m1EmaAligned(m1raw, true);
+    const g2 = this._m5TrendAligned('BULLISH');
 
-    const bms  = g2 ? this._detectTrueBMS(m5, disp) : null;
-    const g3   = !!(bms && bms.type === 'BULLISH_BMS');
+    const m1completed = m1raw.slice(0, -1);
+    const mom = this._detectMomentum(m1completed);
+    const g3  = !!(mom && mom.direction === 'BULLISH');
 
-    const ob   = g3 ? this._detectOrderBlock(m5, bms) : null;
-    const g4   = !!(ob && ob.type === 'BULLISH_OB');
+    const g4 = g3 ? this._notOverextended(m1raw) : false;
 
-    const imb  = g4 ? this._detectImbalance(m5) : null;
-    const g5   = !!(imb && imb.type === 'BULLISH_IMBALANCE');
+    const m15Bias = this._swingBias(candles[900]);
+    const g5 = m15Bias === 'BULLISH';
 
-    // G6 uses live `price` — checks if current tick has retraced into the OB zone
-    const zone = (g4 && ob) ? this._entryZone(ob, true) : null;
-    const g6   = !!(zone && price >= zone.min && price <= zone.max);
+    const trigCandle = mom ? mom.candle : null;
+    const atrNow = this._atr(m1completed);
+    const g6 = !!(trigCandle && Math.abs(price - trigCandle.close) <= atrNow * STRAT_CFG.TRIGGER_TOL_ATR);
 
-    // G5 (FVG) is now a quality booster, not a hard gate — signal fires with or without FVG
-    // G0 (HTF bias) blocks only counter-trend setups
     const signal  = g0 && g1 && g2 && g3 && g4 && g6;
     const score   = [g1, g2, g3, g4, g5, g6].filter(Boolean).length;
     const quality = signal ? (this.inKillZone() && g5 && htf.bias === 'BULLISH' ? 3 : (this.inKillZone() || g5) ? 2 : 1) : 1;
 
-    // SL reference: sweep candle low (new strategy spec)
-    const slRef = sweep ? { low: sweep.candle.low, high: sweep.candle.high } : null;
-
-    const fvg = g5 ? { low: imb.low, high: imb.high, epoch: imb.epoch } : null;
+    const slRef = trigCandle ? { low: trigCandle.low, high: trigCandle.high } : null;
 
     return {
       signal, quality, score,
-      sweepEpoch: sweep ? sweep.candle.epoch : undefined,
-      sweepLow:   sweep ? sweep.level : undefined,
+      sweepEpoch: trigCandle ? trigCandle.epoch : undefined,
+      sweepLow:   trigCandle ? trigCandle.low   : undefined,
       sweepIdx:   undefined,
-      ob:         g4 ? { low: ob.low, high: ob.high, epoch: ob.candle ? ob.candle.epoch : null } : null,
-      fvg,
+      ob:         trigCandle ? { low: trigCandle.low, high: trigCandle.high, epoch: trigCandle.epoch } : null,
+      fvg:        null,
       slRef,
       htf: {
-        htfGateOk: g0, m15Aligned: htf.bias === 'BULLISH', m5Aligned: true,
+        htfGateOk: g0, m15Aligned: htf.bias === 'BULLISH', m5Aligned: g2,
         counterTrendOk: false, score: 10, strongSetupBypass: false,
         m15Bias: htf.bias.toLowerCase(), m5Bias: 'bull', source: htf.source,
       },
@@ -1842,76 +1700,62 @@ const strategy = {
         bSess:  true,
         bKZ:    this.inKillZone(),
         bM15:   htf.bias === 'BULLISH',
-        bM5:    true,
+        bM5:    g2,
         bHTF:   g0,
-        bSweep: g1,
-        bDisp:  g2,
-        bBMS:   g3,
-        bOB:    g4,
-        bFVG:   g5,
-        bHL:    g6,
+        bSweep: g1,   // M1 EMA aligned
+        bDisp:  g2,   // M5 trend confirmed
+        bBMS:   g3,   // momentum trigger fired
+        bOB:    g4,   // not overextended
+        bFVG:   g5,   // M15 quality booster
+        bHL:    g6,   // live price still fresh
         bEntry: signal,
       },
     };
   },
 
   // ═══════════════════════════════════════════════════════════════════
-  //  EVAL SELL
-  //  Mirror of evalBuy for bearish delivery.
-  //  Step 1: M5 buy-side sweep (BUY_SIDE_SWEEP)
-  //  Step 2: M1 displacement is BEARISH
-  //  Step 3: M1 breaks prior low (TRUE BMS)
-  //  Step 4: valid bearish OB on M1
-  //  Step 5: bearish FVG present
-  //  Step 6: price is inside 20–50% mean-threshold from OB top
+  //  EVAL SELL — mirror of evalBuy for bearish trend continuation.
   // ═══════════════════════════════════════════════════════════════════
   evalSell(price) {
     const htf = this._htfBias();
-    const g0  = htf.bias !== 'BULLISH'; // block only counter-trend; NEUTRAL/BEARISH pass
+    const g0  = htf.bias !== 'BULLISH';
 
-    const sweep = this._detectLiquiditySweep();
-    const g1    = !!(sweep && sweep.type === 'BUY_SIDE_SWEEP');
+    const m1raw = candles[60];
+    if (!m1raw || m1raw.length < STRAT_CFG.EMA_SLOW + 2) return this._emptyEval();
 
-    // ── M5 IS THE ENTRY TIMEFRAME (mirror of evalBuy) ──
-    const m5raw = candles[300];
-    const m5    = (m5raw && m5raw.length > 1) ? m5raw.slice(0, -1) : m5raw;
-    const disp = (m5 && m5.length >= 2) ? this._detectDisplacement(m5) : null;
-    const g2   = !!(disp && disp.direction === 'BEARISH');
+    const g1 = this._m1EmaAligned(m1raw, false);
+    const g2 = this._m5TrendAligned('BEARISH');
 
-    const bms  = g2 ? this._detectTrueBMS(m5, disp) : null;
-    const g3   = !!(bms && bms.type === 'BEARISH_BMS');
+    const m1completed = m1raw.slice(0, -1);
+    const mom = this._detectMomentum(m1completed);
+    const g3  = !!(mom && mom.direction === 'BEARISH');
 
-    const ob   = g3 ? this._detectOrderBlock(m5, bms) : null;
-    const g4   = !!(ob && ob.type === 'BEARISH_OB');
+    const g4 = g3 ? this._notOverextended(m1raw) : false;
 
-    const imb  = g4 ? this._detectImbalance(m5) : null;
-    const g5   = !!(imb && imb.type === 'BEARISH_IMBALANCE');
+    const m15Bias = this._swingBias(candles[900]);
+    const g5 = m15Bias === 'BEARISH';
 
-    // G6 uses live `price` — checks if current tick has retraced into the OB zone
-    const zone = (g4 && ob) ? this._entryZone(ob, false) : null;
-    const g6   = !!(zone && price >= zone.min && price <= zone.max);
+    const trigCandle = mom ? mom.candle : null;
+    const atrNow = this._atr(m1completed);
+    const g6 = !!(trigCandle && Math.abs(price - trigCandle.close) <= atrNow * STRAT_CFG.TRIGGER_TOL_ATR);
 
-    // G5 (FVG) is a quality booster, not a hard gate — signal fires with or without FVG
-    // G0 (HTF bias) blocks only counter-trend setups
     const signal  = g0 && g1 && g2 && g3 && g4 && g6;
     const score   = [g1, g2, g3, g4, g5, g6].filter(Boolean).length;
     const quality = signal ? (this.inKillZone() && g5 && htf.bias === 'BEARISH' ? 3 : (this.inKillZone() || g5) ? 2 : 1) : 1;
 
-    const slRef = sweep ? { low: sweep.candle.low, high: sweep.candle.high } : null;
-
-    const fvg = g5 ? { low: imb.low, high: imb.high, epoch: imb.epoch } : null;
+    const slRef = trigCandle ? { low: trigCandle.low, high: trigCandle.high } : null;
 
     return {
       signal, quality, score,
-      sweepEpoch: sweep ? sweep.candle.epoch : undefined,
-      sweepHigh:  sweep ? sweep.level : undefined,
+      sweepEpoch: trigCandle ? trigCandle.epoch : undefined,
+      sweepHigh:  trigCandle ? trigCandle.high  : undefined,
       sweepLow:   undefined,
       sweepIdx:   undefined,
-      ob:         g4 ? { low: ob.low, high: ob.high, epoch: ob.candle ? ob.candle.epoch : null } : null,
-      fvg,
+      ob:         trigCandle ? { low: trigCandle.low, high: trigCandle.high, epoch: trigCandle.epoch } : null,
+      fvg:        null,
       slRef,
       htf: {
-        htfGateOk: g0, m15Aligned: htf.bias === 'BEARISH', m5Aligned: true,
+        htfGateOk: g0, m15Aligned: htf.bias === 'BEARISH', m5Aligned: g2,
         counterTrendOk: false, score: 10, strongSetupBypass: false,
         m15Bias: htf.bias.toLowerCase(), m5Bias: 'bear', source: htf.source,
       },
@@ -1919,7 +1763,7 @@ const strategy = {
         sSess:  true,
         sKZ:    this.inKillZone(),
         sM15:   htf.bias === 'BEARISH',
-        sM5:    true,
+        sM5:    g2,
         sHTF:   g0,
         sSweep: g1,
         sDisp:  g2,
@@ -1930,6 +1774,28 @@ const strategy = {
         sEntry: signal,
       },
     };
+  },
+
+  // Safe empty result shape for when there isn't enough M1 history yet.
+  _emptyEval() {
+    return {
+      signal: false, quality: 1, score: 0,
+      sweepEpoch: undefined, sweepLow: undefined, sweepHigh: undefined, sweepIdx: undefined,
+      ob: null, fvg: null, slRef: null,
+      htf: { htfGateOk: false, m15Aligned: false, m5Aligned: false, counterTrendOk: false, score: 0, strongSetupBypass: false, m15Bias: 'neutral', m5Bias: 'neutral', source: 'NONE' },
+      conds: { bSess: true, bKZ: false, bM15: false, bM5: false, bHTF: false, bSweep: false, bDisp: false, bBMS: false, bOB: false, bFVG: false, bHL: false, bEntry: false,
+               sSess: true, sKZ: false, sM15: false, sM5: false, sHTF: false, sSweep: false, sDisp: false, sBMS: false, sOB: false, sFVG: false, sLH: false, sEntry: false },
+    };
+  },
+
+  // ── COMPAT ACCESSORS (chart drawing reads these for M1 zone overlays) ──
+  bullishBMS() {
+    const r = this.evalBuy(mid);
+    return r.ob ? { valid: r.conds.bBMS, ob: r.ob, fvg: null, sweepLow: r.sweepLow, sweepEpoch: r.sweepEpoch, obCandle: null } : { valid: false };
+  },
+  bearishBMS() {
+    const r = this.evalSell(mid);
+    return r.ob ? { valid: r.conds.sBMS, ob: r.ob, fvg: null, sweepHigh: r.sweepHigh, sweepEpoch: r.sweepEpoch, obCandle: null } : { valid: false };
   },
 
   // ── COMPAT ACCESSORS (used by chart drawing + continuation engine) ──
@@ -2213,7 +2079,7 @@ function drawChart(overridePositions = null, overrideMid = null) {
     const count  = Math.max(bCount, sCount);
     if (count === 0) return;
 
-    const labels = ['S1\nSWEEP','S2\nDISP','S3\nBMS','S4\nOB','S5\nFVG','S6\n20-50%'];
+    const labels = ['S1\nM1-EMA','S2\nM5-TR','S3\nMOM','S4\nPULLBK','S5\nM15','S6\nTRIG'];
     const baseX = PAD.l + 8;
     const baseY = PAD.t + 10;
     const pillW = 28, pillH = 22, gap = 4;
@@ -2252,72 +2118,11 @@ function drawChart(overridePositions = null, overrideMid = null) {
     ctx.restore();
   })();
 
-  // ── MEAN-THRESHOLD ENTRY BAND — highlights the 20–50% zone on active OB/FVG ──
-  // Only rendered when G1–G4 have passed (sweep + disp + MSS + zone present).
-  // Shows the exact price band the strategy requires before firing G5 + G6.
-  (function drawMeanThresholdBand() {
-    const bs = strategy.evalBuy(mid);
-    const ss = strategy.evalSell(mid);
-
-    function renderBand(ob, fvg, isBull) {
-      if (!ob && !fvg) return;
-      const zone = ob || fvg;
-      const size = zone.high - zone.low;
-      let bandLow, bandHigh;
-      if (isBull) {
-        bandLow  = zone.low  + size * 0.20;
-        bandHigh = zone.low  + size * 0.50;
-      } else {
-        bandLow  = zone.high - size * 0.50;
-        bandHigh = zone.high - size * 0.20;
-      }
-      const col = isBull ? '#00d4aa' : '#ff4455';
-      const y1 = toY(bandHigh), y2 = toY(bandLow);
-      if (y2 < PAD.t || y1 > PAD.t + cH) return;
-      ctx.save();
-      // Bright fill for entry band
-      ctx.fillStyle = col + '18';
-      ctx.fillRect(PAD.l, y1, CANDLE_AREA_W, y2 - y1);
-      // Top and bottom dashes
-      ctx.strokeStyle = col + 'cc';
-      ctx.lineWidth = 1;
-      ctx.setLineDash([3, 4]);
-      ctx.beginPath(); ctx.moveTo(PAD.l, y1); ctx.lineTo(PAD.l + CANDLE_AREA_W, y1); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(PAD.l, y2); ctx.lineTo(PAD.l + CANDLE_AREA_W, y2); ctx.stroke();
-      ctx.setLineDash([]);
-      // Mean line (50% of entry band = 35% of OB = optimal entry)
-      const meanY = (y1 + y2) / 2;
-      ctx.strokeStyle = col;
-      ctx.lineWidth = 1;
-      ctx.setLineDash([5, 3]);
-      ctx.beginPath(); ctx.moveTo(PAD.l, meanY); ctx.lineTo(PAD.l + CANDLE_AREA_W, meanY); ctx.stroke();
-      ctx.setLineDash([]);
-      // Label pill
-      ctx.font = 'bold 7px "Space Mono"';
-      const tag = isBull ? 'ENTRY 20–50%' : 'ENTRY 20–50%';
-      const tagW = ctx.measureText(tag).width + 8;
-      const tagX = PAD.l + CANDLE_AREA_W - tagW - 4;
-      const tagY = meanY;
-      ctx.fillStyle = 'rgba(6,6,10,0.90)';
-      ctx.beginPath(); ctx.roundRect(tagX, tagY - 9, tagW, 12, 2); ctx.fill();
-      ctx.strokeStyle = col + '50'; ctx.lineWidth = 0.5; ctx.stroke();
-      ctx.fillStyle = col; ctx.textAlign = 'left';
-      ctx.fillText(tag, tagX + 4, tagY);
-      ctx.restore();
-    }
-
-    // Only draw band if G1–G4 gates passed (setup is forming)
-    const bG4 = bs.conds.bSweep && bs.conds.bDisp && bs.conds.bBMS && (bs.conds.bOB || bs.conds.bFVG);
-    const sG4 = ss.conds.sSweep && ss.conds.sDisp && ss.conds.sBMS && (ss.conds.sOB || ss.conds.sFVG);
-    if (bG4) renderBand(bs.ob, bs.fvg, true);
-    if (sG4) renderBand(ss.ob, ss.fvg, false);
-  })();
-
-  // ── STANDARD M1 OB / FVG ZONES ──
-  drawZone(strategy.bullishOB(),     '#00d4aa', '+OB');
-  drawZone(strategy.bearishOB(),     '#ff4455', '-OB');
-  drawZone(strategy.bullishFVGZone(),'#22bbff', '+FVG');
-  drawZone(strategy.bearishFVGZone(),'#ff8833', '-FVG');
+  // ── MOMENTUM TRIGGER ZONE — highlights the M1 candle that fired the trend entry ──
+  // Trend-following mode trades the burst candle directly; there's no
+  // retracement-and-wait band to draw, so this just marks the trigger candle.
+  drawZone(strategy.bullishOB(),     '#00d4aa', '+TRIG');
+  drawZone(strategy.bearishOB(),     '#ff4455', '-TRIG');
   function markOBCandle(obSourceCandle, col) {
     if (!obSourceCandle) return;
     const candleIdx = vis.findIndex(c => c.epoch === obSourceCandle.epoch);
@@ -4123,8 +3928,8 @@ function connect() {
 
 
 // ── CONTINUATION ENGINE ──
-// New strategy requires a fresh full chain: M5 sweep → M1 displacement → BMS → OB → FVG → zone.
-// No score thresholds — the chain either fires completely or it waits.
+// Trend-following mode: requires a fresh full chain (HTF bias → M1/M5 EMA
+// alignment → momentum burst → pullback filter → live trigger) before firing.
 function evalContinuation(dir) {
   const isBull = dir === 'UP';
   const result = isBull ? strategy.evalBuy(mid) : strategy.evalSell(mid);
@@ -4143,9 +3948,9 @@ let lastTradedBearSweepPrice = 0;
 
 function runStrategy() {
   if (!botOn || !mid) return;
-  if (candles[300].length < 20) return; // need enough M5 bars for ATR + structure — M5 is now the entry TF
+  if (candles[60].length < STRAT_CFG.EMA_SLOW + 2 || candles[300].length < STRAT_CFG.TREND_EMA + 2) return; // need enough M1/M5 bars for EMA calc
   const now = Date.now();
-  if (now - lastSigMs < 1000) return;
+  if (now - lastSigMs < 250) return; // fast pace — M1 trigger checked frequently
 
   // ── DRAWDOWN GUARD ──
   const curBal   = authed ? balance : demoBalance;
@@ -4189,8 +3994,11 @@ function runStrategy() {
   const newsMsg = newsEngine.getContextMessage();
   if (newsMsg && now % 15000 < 1000) addSignal('info', newsMsg, null);
 
-  // ── ONE POSITION AT A TIME ──
-  if (demoPositions.length > 0) return;
+  // ── PYRAMIDING CAP — multiple same-direction trend adds allowed, no hedging ──
+  if (demoPositions.length >= CFG.MAX_CONCURRENT_POS) return;
+  const openDir = demoPositions.length ? demoPositions[0].dir : null; // 'UP' | 'DOWN' | null
+  const canBuy  = openDir === null || openDir === 'UP';
+  const canSell = openDir === null || openDir === 'DOWN';
 
   // ── POST-TP: clear when window expires or a fresh signal fires ──
   if (postTPState && now >= postTPState.evalEndTime) {
@@ -4198,7 +4006,7 @@ function runStrategy() {
   }
 
   // ── EVALUATE SIGNALS ──
-  // Strategy chain: M5 Sweep → M1 Displacement → True BMS → OB → FVG → 20-50% Zone
+  // Strategy chain: HTF-Trend → M1-EMA → M5-Trend → Momentum → Pullback-OK → Trigger
   const bs = strategy.evalBuy(mid);
   const ss = strategy.evalSell(mid);
   updateConditionals(bs.conds, ss.conds);
@@ -4206,22 +4014,22 @@ function runStrategy() {
   // ── PROGRESS LOG (every 5 s when chain is partially forming) ──
   if (now % 5000 < 1000) {
     if (!bs.signal && bs.score > 0) {
-      const steps = ['SWEEP','DISP','BMS','OB','FVG','20-50%'];
+      const steps = ['M1-EMA','M5-TREND','MOMENTUM','PULLBACK','M15','TRIGGER'];
       const pending = steps.filter((_, i) => ![bs.conds.bSweep, bs.conds.bDisp,
         bs.conds.bBMS, bs.conds.bOB, bs.conds.bFVG, bs.conds.bHL][i]);
       addSignal('info', `BUY chain ${bs.score}/6 — waiting: ${pending.join('→')}`, mid);
     }
     if (!ss.signal && ss.score > 0) {
-      const steps = ['SWEEP','DISP','BMS','OB','FVG','20-50%'];
+      const steps = ['M1-EMA','M5-TREND','MOMENTUM','PULLBACK','M15','TRIGGER'];
       const pending = steps.filter((_, i) => ![ss.conds.sSweep, ss.conds.sDisp,
         ss.conds.sBMS, ss.conds.sOB, ss.conds.sFVG, ss.conds.sLH][i]);
       addSignal('info', `SELL chain ${ss.score}/6 — waiting: ${pending.join('→')}`, mid);
     }
   }
 
-  // ── SWEEP EPOCH DEDUPLICATION (further loosened for M5 entry pace) ──
-  const COOLDOWN   = 1 * 60 * 1000;   // ↓ from 2 min
-  const PRICE_TOL  = 0.10;            // ↓ from 0.15
+  // ── TRIGGER DEDUPLICATION — one entry per M1 bar per direction (HFT pace) ──
+  const COOLDOWN   = 10 * 1000;   // ↓ from 1 min — fast re-entry for trend adds
+  const PRICE_TOL  = 0.05;
 
   const isBullDup = bs.sweepEpoch !== undefined && (
     (now - lastTradedBullSweepEpoch < COOLDOWN) ||
@@ -4233,7 +4041,7 @@ function runStrategy() {
   );
 
   // ── FIRE BUY ──
-  if (bs.signal && bs.sweepEpoch !== undefined && !isBullDup) {
+  if (canBuy && bs.signal && bs.sweepEpoch !== undefined && !isBullDup) {
     lastSigMs = now;
     lastTradedBullSweepIdx   = bs.sweepIdx;
     lastTradedBullSweepEpoch = now;
@@ -4243,13 +4051,13 @@ function runStrategy() {
     const kzTag = strategy.activeKillZone() ? ` [${strategy.activeKillZone()}]` : '';
     const grade = bs.quality >= 3 ? '★★★' : bs.quality === 2 ? '★★' : '★';
     const nTag  = newsEngine.state !== 'NORMAL' ? ` [NEWS:${newsEngine.state}]` : '';
+    const addTag = demoPositions.length ? ` [ADD ${demoPositions.length + 1}/${CFG.MAX_CONCURRENT_POS}]` : '';
     addSignal('buy',
-      `[${sess}]${kzTag} BUY ${grade}${nTag} — M5-Sweep→M1-Disp→BMS→OB→FVG→20-50% ✓ SL@sweep-low`, mid);
-    // SL placed at M5 sweep candle low (new strategy spec)
+      `[${sess}]${kzTag} BUY ${grade}${nTag}${addTag} — Trend→M1-EMA→M5-Trend→Momentum→Pullback-OK ✓`, mid);
     placeDemoTrade('UP', bs.slRef || bs.ob, bs.quality);
 
   // ── FIRE SELL ──
-  } else if (ss.signal && ss.sweepEpoch !== undefined && !isBearDup) {
+  } else if (canSell && ss.signal && ss.sweepEpoch !== undefined && !isBearDup) {
     lastSigMs = now;
     lastTradedBearSweepIdx   = ss.sweepIdx;
     lastTradedBearSweepEpoch = now;
@@ -4259,9 +4067,9 @@ function runStrategy() {
     const kzTag = strategy.activeKillZone() ? ` [${strategy.activeKillZone()}]` : '';
     const grade = ss.quality >= 3 ? '★★★' : ss.quality === 2 ? '★★' : '★';
     const nTag  = newsEngine.state !== 'NORMAL' ? ` [NEWS:${newsEngine.state}]` : '';
+    const addTag = demoPositions.length ? ` [ADD ${demoPositions.length + 1}/${CFG.MAX_CONCURRENT_POS}]` : '';
     addSignal('sell',
-      `[${sess}]${kzTag} SELL ${grade}${nTag} — M5-Sweep→M1-Disp→BMS→OB→FVG→20-50% ✓ SL@sweep-high`, mid);
-    // SL placed at M5 sweep candle high (new strategy spec)
+      `[${sess}]${kzTag} SELL ${grade}${nTag}${addTag} — Trend→M1-EMA→M5-Trend→Momentum→Pullback-OK ✓`, mid);
     placeDemoTrade('DOWN', ss.slRef || ss.ob, ss.quality);
   }
 }
@@ -4306,7 +4114,7 @@ function startBot() {
   if(!authed) demoStartBal = demoBalance;
   if(authed && !startBalance && balance) { startBalance=balance; CFG.START_BALANCE=balance; }
   syncBotButtons();
-  addSignal('info','Bot STARTED — Scanning for ICT/SMC Sniper setups: SWEEP→DISP→MSS→OB/FVG→20-50%→CONF',null);
+  addSignal('info','Bot STARTED — Trend-following mode: HTF-Bias→M1-EMA→M5-Trend→Momentum→Pullback-OK (pyramiding up to '+CFG.MAX_CONCURRENT_POS+' positions)',null);
 }
 function stopBot() {
   botOn=false;
@@ -5874,7 +5682,7 @@ setInterval(() => {
 
 addSignal('info','XAUUSD PA Bot v2 — Deriv WebSocket data engine ready',null);
 
-addSignal('info','Strategy: Elite ICT/SMC Delivery Engine — H1+M15 Bias → M5 Liquidity Sweep → M5 True BMS → M5 Displacement → M5 OB → M5 FVG (optional) → 4-97% Mean Threshold | SL=Sweep Candle | M5 is the entry TF; H1/M15 gate direction only',null);
+addSignal('info','Strategy: Trend-Following Momentum Engine — H1+M15 Bias → M1 EMA(8/21) Alignment → M5 EMA(20) Trend Slope → M1 Momentum Burst → Pullback Filter → Live Trigger | Pyramids up to '+CFG.MAX_CONCURRENT_POS+' same-direction positions | H1/M15 gate direction only',null);
 </script>
 </body>
 </html>
