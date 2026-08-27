@@ -1465,7 +1465,7 @@ const STRAT_CFG = {
   MIN_DISPLACEMENT_MULTIPLIER: 0.45, // ↑ from 0.30 — require a genuinely strong burst candle, not noise
   MIN_BODY_RATIO:          0.35,   // ↑ from 0.15 — burst candle must be mostly body, not a wicky doji
   PULLBACK_MAX_ATR:        1.0,    // ↓ from 1.4 — reject entries chasing an already-extended move
-  TRIGGER_TOL_ATR:         0.40,   // ↓ from 0.70 — live price must still be close to the trigger, no stale chase
+  TRIGGER_TOL_ATR:         0.50,   // balanced — was 0.70 (too loose/stale) then 0.40 (too tight); live price must stay reasonably close to the trigger
   ATR_PERIOD:              14,
   // NOTE: quality is now always ≥2 whenever signal fires, since M15
   // alignment (g5) is a hard gate below — no separate MIN_QUALITY check needed.
@@ -1674,18 +1674,23 @@ const strategy = {
     const g4 = g3 ? this._notOverextended(m1raw) : false;
 
     const m15Bias = this._swingBias(candles[900]);
-    const g5 = m15Bias === 'BULLISH';
+    // g5 is a "not opposing" gate, not a "must match" gate: block only when
+    // M15 structure is outright BEARISH against a BUY (real disagreement).
+    // NEUTRAL M15 (very common — HTF isn't always in a clean swing) still
+    // allows the trade through, just at a lower quality/size tier, instead
+    // of going quiet for long stretches waiting for a perfect M15 read.
+    const g5 = m15Bias !== 'BEARISH';
+    const g5Strong = m15Bias === 'BULLISH'; // exact alignment — used for quality tier only
 
     const trigCandle = mom ? mom.candle : null;
     const atrNow = this._atr(m1completed);
     const g6 = !!(trigCandle && Math.abs(price - trigCandle.close) <= atrNow * STRAT_CFG.TRIGGER_TOL_ATR);
 
-    // g5 (M15 swing bias) is now a HARD gate — full H1/M15/M5/M1 agreement
-    // required. This cuts trade frequency but removes the weakest-confluence
-    // setups, which were the ones most likely to reverse straight into the SL.
+    // g5 remains a hard gate against outright counter-M15 trades; g5Strong
+    // (exact M15 agreement) only affects quality/sizing, not go/no-go.
     const signal  = g0 && g1 && g2 && g3 && g4 && g5 && g6;
-    const score   = [g1, g2, g3, g4, g5, g6].filter(Boolean).length;
-    const quality = signal ? (this.inKillZone() && htf.bias === 'BULLISH' ? 3 : 2) : 1;
+    const score   = [g1, g2, g3, g4, g5Strong, g6].filter(Boolean).length;
+    const quality = signal ? (this.inKillZone() && g5Strong && htf.bias === 'BULLISH' ? 3 : (this.inKillZone() || g5Strong) ? 2 : 1) : 1;
 
     const slRef = trigCandle ? { low: trigCandle.low, high: trigCandle.high } : null;
 
@@ -1739,16 +1744,18 @@ const strategy = {
     const g4 = g3 ? this._notOverextended(m1raw) : false;
 
     const m15Bias = this._swingBias(candles[900]);
-    const g5 = m15Bias === 'BEARISH';
+    // g5 = "not opposing" gate (see evalBuy) — blocks only outright BULLISH
+    // M15 disagreement against a SELL; NEUTRAL still trades at lower quality.
+    const g5 = m15Bias !== 'BULLISH';
+    const g5Strong = m15Bias === 'BEARISH';
 
     const trigCandle = mom ? mom.candle : null;
     const atrNow = this._atr(m1completed);
     const g6 = !!(trigCandle && Math.abs(price - trigCandle.close) <= atrNow * STRAT_CFG.TRIGGER_TOL_ATR);
 
-    // g5 (M15 swing bias) is now a HARD gate — see evalBuy for rationale.
     const signal  = g0 && g1 && g2 && g3 && g4 && g5 && g6;
-    const score   = [g1, g2, g3, g4, g5, g6].filter(Boolean).length;
-    const quality = signal ? (this.inKillZone() && htf.bias === 'BEARISH' ? 3 : 2) : 1;
+    const score   = [g1, g2, g3, g4, g5Strong, g6].filter(Boolean).length;
+    const quality = signal ? (this.inKillZone() && g5Strong && htf.bias === 'BEARISH' ? 3 : (this.inKillZone() || g5Strong) ? 2 : 1) : 1;
 
     const slRef = trigCandle ? { low: trigCandle.low, high: trigCandle.high } : null;
 
