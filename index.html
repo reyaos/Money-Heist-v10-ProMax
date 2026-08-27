@@ -1085,7 +1085,7 @@ input[type=range]::-webkit-slider-thumb{
 // ════════════════════════════════════════════════════════════════════════════
 // ── DERIV WEBSOCKET CONFIG ──
 const DERIV_APP_ID = 1089;        // public demo app_id — register at deriv.com for production
-const DERIV_WS_URL = `wss://ws.binaryws.com/websockets/v3?app_id=${DERIV_APP_ID}`;
+const DERIV_WS_URL = `wss://ws.derivws.com/websockets/v3?app_id=${DERIV_APP_ID}`;
 const DERIV_SYMBOL = 'frxXAUUSD'; // Deriv symbol for spot Gold / USD
 
 let _derivWS             = null;  // WebSocket handle — Deriv live feed
@@ -1461,11 +1461,13 @@ const STRAT_CFG = {
   EMA_FAST:                8,      // M1 fast EMA — momentum/trend trigger
   EMA_SLOW:                21,     // M1 slow EMA — trend filter
   TREND_EMA:               20,     // M5 EMA period — HTF trend slope confirmation
-  MIN_DISPLACEMENT_MULTIPLIER: 0.30, // momentum candle range ≥ 0.30× ATR (fast pace)
-  MIN_BODY_RATIO:          0.15,   // momentum candle body ≥ 15% of range
-  PULLBACK_MAX_ATR:        1.4,    // max distance from M1 fast EMA (in ATR) before a move is "overextended"
-  TRIGGER_TOL_ATR:         0.70,   // live price must stay within this many ATR of the trigger candle close
+  MIN_DISPLACEMENT_MULTIPLIER: 0.45, // ↑ from 0.30 — require a genuinely strong burst candle, not noise
+  MIN_BODY_RATIO:          0.35,   // ↑ from 0.15 — burst candle must be mostly body, not a wicky doji
+  PULLBACK_MAX_ATR:        1.0,    // ↓ from 1.4 — reject entries chasing an already-extended move
+  TRIGGER_TOL_ATR:         0.40,   // ↓ from 0.70 — live price must still be close to the trigger, no stale chase
   ATR_PERIOD:              14,
+  // NOTE: quality is now always ≥2 whenever signal fires, since M15
+  // alignment (g5) is a hard gate below — no separate MIN_QUALITY check needed.
 };
 
 const strategy = {
@@ -1677,9 +1679,12 @@ const strategy = {
     const atrNow = this._atr(m1completed);
     const g6 = !!(trigCandle && Math.abs(price - trigCandle.close) <= atrNow * STRAT_CFG.TRIGGER_TOL_ATR);
 
-    const signal  = g0 && g1 && g2 && g3 && g4 && g6;
+    // g5 (M15 swing bias) is now a HARD gate — full H1/M15/M5/M1 agreement
+    // required. This cuts trade frequency but removes the weakest-confluence
+    // setups, which were the ones most likely to reverse straight into the SL.
+    const signal  = g0 && g1 && g2 && g3 && g4 && g5 && g6;
     const score   = [g1, g2, g3, g4, g5, g6].filter(Boolean).length;
-    const quality = signal ? (this.inKillZone() && g5 && htf.bias === 'BULLISH' ? 3 : (this.inKillZone() || g5) ? 2 : 1) : 1;
+    const quality = signal ? (this.inKillZone() && htf.bias === 'BULLISH' ? 3 : 2) : 1;
 
     const slRef = trigCandle ? { low: trigCandle.low, high: trigCandle.high } : null;
 
@@ -1739,9 +1744,10 @@ const strategy = {
     const atrNow = this._atr(m1completed);
     const g6 = !!(trigCandle && Math.abs(price - trigCandle.close) <= atrNow * STRAT_CFG.TRIGGER_TOL_ATR);
 
-    const signal  = g0 && g1 && g2 && g3 && g4 && g6;
+    // g5 (M15 swing bias) is now a HARD gate — see evalBuy for rationale.
+    const signal  = g0 && g1 && g2 && g3 && g4 && g5 && g6;
     const score   = [g1, g2, g3, g4, g5, g6].filter(Boolean).length;
-    const quality = signal ? (this.inKillZone() && g5 && htf.bias === 'BEARISH' ? 3 : (this.inKillZone() || g5) ? 2 : 1) : 1;
+    const quality = signal ? (this.inKillZone() && htf.bias === 'BEARISH' ? 3 : 2) : 1;
 
     const slRef = trigCandle ? { low: trigCandle.low, high: trigCandle.high } : null;
 
@@ -3014,6 +3020,13 @@ function calcDynamicLots(slDist, quality, useBalance, useStartBal) {
   return { lots, qMult, growthFactor, riskPct, slAmount: lots * 100 * slDist };
 }
 
+// ── SL NOISE BUFFER — scales with current volatility instead of a fixed
+// 1.0pt gap, so stops sit outside normal wick noise around the trigger
+// candle's high/low rather than getting clipped by it. ──
+function slNoiseBuffer(atrVal) {
+  return Math.max((atrVal || 0) * 0.35, 1.5);
+}
+
 // ── DEMO TRADE PLACEMENT ──
 function placeDemoTrade(dir, ob, quality = 1) {
   if(!mid) return;
@@ -3041,9 +3054,11 @@ function _executeDemoTrade(dir, ob, quality = 1) {
     ? mid + dynSpread / 2 + slip
     : mid - dynSpread / 2 + slip).toFixed(2);
 
+  const m1atr = strategy._atr(candles[60].slice(0, -1));
   let slPrice;
   if(ob) {
-    slPrice = isBuy ? ob.low - 1.0 : ob.high + 1.0;
+    const buf = slNoiseBuffer(m1atr);
+    slPrice = isBuy ? ob.low - buf : ob.high + buf;
   } else {
     const arr = candles[currentTF];
     const lastN = arr.length >= 14 ? arr.slice(-14) : arr;
@@ -3964,9 +3979,13 @@ function runStrategy() {
     }
   }
 
-  // ── DEAD MARKET GUARD ──
+  // ── REGIME GUARD ──
+  // This is a trend-continuation strategy — it needs a trend. DEAD markets
+  // give no room to run; RANGE markets fake out momentum bursts constantly
+  // (price bursts, then mean-reverts straight into the SL). Only trade when
+  // the market is actually trending or expanding.
   const regime = detectMarketRegime();
-  if (regime === 'DEAD') return;
+  if (regime === 'DEAD' || regime === 'RANGE') return;
 
   // ── SURVIVAL ENGINE: SESSION LOCK & HOURLY PAUSE ──
   // Session lock requires a manual bot restart to clear — enforces a hard cool-down
@@ -3997,8 +4016,12 @@ function runStrategy() {
   // ── PYRAMIDING CAP — multiple same-direction trend adds allowed, no hedging ──
   if (demoPositions.length >= CFG.MAX_CONCURRENT_POS) return;
   const openDir = demoPositions.length ? demoPositions[0].dir : null; // 'UP' | 'DOWN' | null
-  const canBuy  = openDir === null || openDir === 'UP';
-  const canSell = openDir === null || openDir === 'DOWN';
+  // Only pyramid onto a position that is already working in your favor —
+  // adding to a loser just increases exposure right as the setup is failing.
+  const floatingPnL = demoPositions.length ? demoPositions.reduce((s,p) => s + calcPnLForPos(p, mid), 0) : 0;
+  const okToAdd = !demoPositions.length || floatingPnL > 0;
+  const canBuy  = (openDir === null || openDir === 'UP')   && okToAdd;
+  const canSell = (openDir === null || openDir === 'DOWN') && okToAdd;
 
   // ── POST-TP: clear when window expires or a fresh signal fires ──
   if (postTPState && now >= postTPState.evalEndTime) {
@@ -4027,8 +4050,8 @@ function runStrategy() {
     }
   }
 
-  // ── TRIGGER DEDUPLICATION — one entry per M1 bar per direction (HFT pace) ──
-  const COOLDOWN   = 10 * 1000;   // ↓ from 1 min — fast re-entry for trend adds
+  // ── TRIGGER DEDUPLICATION — one entry per M1 bar per direction ──
+  const COOLDOWN   = 45 * 1000;   // ↑ from 10s — stops rapid re-entry into a move that's already failing
   const PRICE_TOL  = 0.05;
 
   const isBullDup = bs.sweepEpoch !== undefined && (
@@ -4637,7 +4660,9 @@ const replay = {
 
     let slPrice;
     if (sig.ob) {
-      slPrice = isBuy ? sig.ob.low - 1.0 : sig.ob.high + 1.0;
+      const btAtr = strategy._atr(candles[60].slice(0, -1));
+      const buf = slNoiseBuffer(btAtr);
+      slPrice = isBuy ? sig.ob.low - buf : sig.ob.high + buf;
     } else {
       const lastN = candles[60].slice(-14);
       const atr = lastN.reduce((s, c) => s + c.high - c.low, 0) / (lastN.length || 1);
