@@ -1161,6 +1161,7 @@ const candles  = { 60:[], 300:[], 900:[], 3600:[] };
 // ── TAB VISIBILITY / GAP TRACKING ──
 let _hiddenAt       = 0;     // timestamp when tab was hidden
 let _midAtHide      = 0;     // last known mid when tab went background
+let _lastTickAt     = 0;     // watchdog: last time a live tick was received
 let _gapCheckPending = false; // true after resume with open positions
 
 // ── POST-TP CONTINUATION STATE ──
@@ -3860,6 +3861,7 @@ function _handleDerivMsg(msg) {
 
   // ── Real-time tick ──────────────────────────────────────────────
   if (msg.msg_type === 'tick' && msg.tick) {
+    _lastTickAt = Date.now();
     const t   = msg.tick;
     const newBid = +(t.bid   || t.quote);
     const newAsk = +(t.ask   || t.quote);
@@ -5549,8 +5551,11 @@ function drawGenericEquityCurve(canvas, equity, startBal, cssH) {
 // When the browser tabs or minimizes on mobile, the WebSocket drops and
 // `mid` freezes at the last known price. On resume, the first live tick
 // makes `mid` jump — potentially past an SL/TP — causing wrong closes.
-// Fix: detect visibility changes, then on reconnect scan the M1 OHLC
-// candles (which cover the gap period) to find the real close price/reason.
+// Fix: detect visibility changes, force a fresh WS connection on resume
+// (backgrounded mobile tabs get frozen/throttled and the old socket is
+// usually already dead even if no `close` event ever fired), then scan
+// the M1 OHLC candles (which cover the gap period) to find the real
+// close price/reason for any positions that were open during the gap.
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
     _hiddenAt   = Date.now();
@@ -5567,8 +5572,30 @@ document.addEventListener('visibilitychange', () => {
         `Tab resumed after ${Math.round(gapMs/1000)}s — scanning M1 candles for SL/TP hits during gap...`, null);
     }
     _hiddenAt = 0;
+    // Force a fresh connection on resume rather than hoping the old socket
+    // survived the background period — mobile tabs routinely freeze/kill it
+    // silently, so waiting for an onclose event can leave the feed dead
+    // indefinitely with no error ever shown.
+    if (gapMs > 3000) {
+      addSignal('info', 'Tab resumed — reconnecting feed to be safe...', null);
+      connect();
+    }
   }
 });
+
+// ── FEED WATCHDOG ──
+// Catches a dead/stale connection even when the tab was never backgrounded
+// (e.g. a silent drop, rate limit, or a socket that reports "open" but has
+// stopped actually delivering ticks). If no tick has arrived in 20s while
+// the tab is visible, force a reconnect instead of sitting frozen forever.
+setInterval(() => {
+  if (document.hidden) return;
+  if (!_lastTickAt) return; // haven't connected yet — _connectDeriv's own retry handles this
+  if (Date.now() - _lastTickAt > 20000) {
+    addSignal('warn', 'No live ticks for 20s — feed looks dead, reconnecting...', null);
+    connect();
+  }
+}, 10000);
 
 // Called after M1 candles are refreshed on reconnect.
 // Scans candles that occurred while the tab was hidden and closes positions
